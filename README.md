@@ -1,12 +1,8 @@
 # mlteam-lime-for-tsne
 MLTeam: Apply LIME for t-SNE
+The note for the meeting of our team is [here](meeting_notes.md)
 
 ![](LIME+tSNE.png)
-
-## TODO
-+ [ ] Minh: Check stability of sampling
-+ [ ] Minh: Sampling with linear combination of neighbors
-
 
 ## Some dev notes:
 We can add some note for environment configuration, hyperparameters, tip and tricks here.
