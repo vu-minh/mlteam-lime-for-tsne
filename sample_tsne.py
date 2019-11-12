@@ -144,16 +144,15 @@ def plot(Y, y_samples, selected_idx=[], labels=None, out_name="noname00"):
 
 
 if __name__ == "__main__":
-    n_samples = 50  # number of points to sample
+    n_samples = 25  # number of points to sample
     sigma_HD = 0.5  # larger of Gaussian in HD
     sigma_LD = 1  # larger of Gaussian in LD
     N_max = 200  # maximum number of data points for testing only
-    dataset_name = "iris"
+    dataset_name = "digits"
     plot_dir = "./plots"
     debug_level = 0
 
-    # TODO check stable of sampling.
-    # E.g., seed 1024 works well for iris, 42 for digits
+    # TODO check stable of sampling. (e.g. seed 1024 iris, 42 digits)
 
     # basic params to run tsne the first time
     tsne_hyper_params = dict(perplexity=30, n_iter=1500, random_state=42, verbose=debug_level)
