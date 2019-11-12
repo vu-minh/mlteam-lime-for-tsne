@@ -1,6 +1,8 @@
 # mlteam-lime-for-tsne
 MLTeam: Apply LIME for t-SNE
 
+![](LIME+tSNE.png)
+
 ## TODO
 + [ ] Minh: Check stability of sampling
 + [ ] Minh: Sampling with linear combination of neighbors
