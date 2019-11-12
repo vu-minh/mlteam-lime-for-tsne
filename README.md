@@ -20,3 +20,19 @@ git submodule add https://github.com/vu-minh/py-common.git common
 # keep the code in `common` up-to-date
 git submodule update
 ```
+
+*Note on the stability of sampling method*:
++ Update 12/11/2019: the sampling is now *NOT STABLE*
++ The params using reproducing the samplings are:
+```
+iris dataset:
+	seed = 1024
+	sigma_HD = 0.25
+    sigma_LD = 0.5
+
+digits dataset:
+	seed = 42
+	sigma_HD = 0.5
+    sigma_LD = 1.0
+
+```

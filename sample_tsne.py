@@ -4,6 +4,7 @@
 # Goal: given an input X, approximate an embedding y without fully rerun tsne
 
 from time import time
+from functools import partial
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -22,6 +23,17 @@ def sample_around(x, sigma=0.1, n_samples=1):
     return x + epsilon
 
 
+def sample_with_global_noise(x, data, factor=0.5, n_samples=1):
+    """Sample with global noise from the multivariate gaussian of HD `data` (denoted as `X`).
+    global noise `epsilon` ~ MVN(X.mu, X.sigma^2)
+    Given the input point `x`, return `x + epsilon`
+    """
+    mean = data.mean(axis=0)  # global mean of data according each feature
+    sigma = data.var(axis=0)  # sigma is variance, which is square of std
+    epsilon = np.random.multivariate_normal(mean=mean, cov=np.diag(sigma), size=n_samples)
+    return x + factor * epsilon
+
+
 def tsne_sample_embedded_points(
     X,
     selected_idx,
@@ -30,6 +42,7 @@ def tsne_sample_embedded_points(
     sigma_LD=0.1,
     tsne_hyper_params={},
     early_stop_hyper_params={},
+    sampling_method="sample_around",
 ):
     """Estimate sampled embedding in LD
     Args:
@@ -56,7 +69,11 @@ def tsne_sample_embedded_points(
     y_samples = []
     for i in range(n_samples):
         # sample a point in HD
-        x_sample = sample_around(X[selected_idx], sigma=sigma_HD, n_samples=1)
+        sampling_func = {
+            "sample_around": partial(sample_around, sigma=sigma_HD),
+            "sample_with_global_noise": partial(sample_with_global_noise, data=X),
+        }[sampling_method]
+        x_sample = sampling_func(X[selected_idx], n_samples=1)
 
         # update hyper-params for quick re-run tsne
         tsne_hyper_params.update(early_stop_hyper_params)
@@ -144,15 +161,16 @@ def plot(Y, y_samples, selected_idx=[], labels=None, out_name="noname00"):
 
 
 if __name__ == "__main__":
-    n_samples = 25  # number of points to sample
+    n_samples = 100  # number of points to sample
     sigma_HD = 0.5  # larger of Gaussian in HD
-    sigma_LD = 1  # larger of Gaussian in LD
+    sigma_LD = 1.0  # larger of Gaussian in LD
     N_max = 200  # maximum number of data points for testing only
+    sampling_method = "sample_around"  # in ["sample_around", "sample_with_global_noise"]
     dataset_name = "digits"
     plot_dir = "./plots"
     debug_level = 0
 
-    # TODO check stable of sampling. (e.g. seed 1024 iris, 42 digits)
+    # TODO check stability of sampling. (e.g. seed 1024 iris, 42 digits)
 
     # basic params to run tsne the first time
     tsne_hyper_params = dict(perplexity=30, n_iter=1500, random_state=42, verbose=debug_level)
