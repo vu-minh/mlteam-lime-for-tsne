@@ -1,6 +1,11 @@
 # mlteam-lime-for-tsne
 MLTeam: Apply LIME for t-SNE
 
+## TODO
++ [ ] Minh: Check stability of sampling
++ [ ] Minh: Sampling with linear combination of neighbors
+
+
 ## Some dev notes:
 We can add some note for environment configuration, hyperparameters, tip and tricks here.
 
@@ -21,7 +26,6 @@ git submodule add https://github.com/vu-minh/py-common.git common
 git submodule update
 ```
 
-<<<<<<< HEAD
 *Note on the stability of sampling method*:
 + Update 12/11/2019: the sampling is now *NOT STABLE*
 + The params using reproducing the samplings are:
@@ -37,7 +41,7 @@ digits dataset:
     sigma_LD = 1.0
 
 ```
-=======
+
 ### Using `sample_tsne`
 Goal: given a selected index of a point `selected_idx`, sample some points arround it in HD (`x_samples`) and ask tsne to calculate the embedding of these sampled points in LD (`y_samples`)
 
@@ -62,4 +66,3 @@ Y, x_samples, y_samples = tsne_sample_embedded_points(
     early_stop_hyper_params=early_stop_hyper_params,
 )
 ```
->>>>>>> 17b114f5c023f56ddb72da2a97d3fe505649d8fc
