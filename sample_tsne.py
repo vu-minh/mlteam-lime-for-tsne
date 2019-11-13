@@ -3,8 +3,12 @@
 # Query-blackbox like function for tsne
 # Goal: given an input X, approximate an embedding y without fully rerun tsne
 
+import os
+import math
+import joblib
 from time import time
 from functools import partial
+
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -34,6 +38,29 @@ def sample_with_global_noise(x, data, factor=0.5, n_samples=1):
     return x + factor * epsilon
 
 
+def perturb_image(x, replace_rate=(1, 4)):
+    """Random remove some pixels in the input image `x`
+    The percent of removed pixels is in `replace_rate`.
+    """
+    replace_rate = 0.1 * np.random.randint(*replace_rate)
+    mask = np.random.choice([0, 1], size=x.shape, p=((1 - replace_rate), replace_rate))
+    x_new = x.copy()
+    x_new[mask.astype(np.bool)] = 0
+    return x_new.reshape(1, -1)
+
+
+def remove_blob(x, n_remove=1):
+    """Randomly remove some blobs with random size from the input image `x`
+    """
+    img_size = int(math.sqrt(len(x)))
+    x_new = x.copy().reshape(img_size, img_size)
+    for _ in range(n_remove):
+        col1, col2 = np.random.randint(0, img_size, size=2)
+        row1, row2 = np.random.randint(0, img_size, size=2)
+        x_new[min(row1, row2) : max(row1, row2), min(col1, col2) : max(col1, col2)] = 0
+    return x_new.reshape(1, -1)
+
+
 def tsne_sample_embedded_points(
     X,
     selected_idx,
@@ -43,6 +70,8 @@ def tsne_sample_embedded_points(
     tsne_hyper_params={},
     early_stop_hyper_params={},
     sampling_method="sample_around",
+    log_dir="./",
+    force_recompute=False,
 ):
     """Estimate sampled embedding in LD
     Args:
@@ -61,46 +90,66 @@ def tsne_sample_embedded_points(
     assert isinstance(selected_idx, int), "`selected_idx` must be a valid index"
 
     # first, run tsne with base `perplexity` to obtain the "base model"
-    tsne = TSNE(**tsne_hyper_params)
-    Y = tsne.fit_transform(X)
-    print("[DEBUG] Initial tsne model: ", tsne)
+    log_name_pattern = (
+        f"-id{selected_idx}"
+        f"-perp{tsne_hyper_params['perplexity']}"
+        f"-sigmaHD{sigma_HD}-sigmaLD{sigma_LD}"
+        f"-seed{tsne_hyper_params['random_state']}.Z"
+    )
+    log_name_Y = f"{log_dir}/Y{log_name_pattern}"
+    if os.path.exists(log_name_Y) and not force_recompute:
+        Y = joblib.load(log_name_Y)
+        print("[DEBUG] Reuse: ", log_name_Y)
+    else:
+        tsne = TSNE(**tsne_hyper_params)
+        Y = tsne.fit_transform(X)
+        joblib.dump(Y, log_name_Y)
+        print("[DEBUG] Initial tsne model: ", tsne)
 
-    x_samples = []
-    y_samples = []
-    for i in range(n_samples):
-        # sample a point in HD
-        sampling_func = {
-            "sample_around": partial(sample_around, sigma=sigma_HD),
-            "sample_with_global_noise": partial(sample_with_global_noise, data=X),
-        }[sampling_method]
-        x_sample = sampling_func(X[selected_idx], n_samples=1)
+    log_name_samples = f"{log_dir}/{sampling_method}{n_samples}{log_name_pattern}"
+    if os.path.exists(log_name_samples) and not force_recompute:
+        x_samples, y_samples = joblib.load(log_name_samples)
+        print("[DEBUG] Reuse: ", log_name_samples)
+    else:
+        x_samples = []
+        y_samples = []
+        for i in range(n_samples):
+            # sample a point in HD
+            sampling_func = {
+                "sample_around": partial(sample_around, sigma=sigma_HD),
+                "sample_with_global_noise": partial(sample_with_global_noise, data=X),
+                "perturb_image": partial(perturb_image, replace_rate=(1, 9)),
+                "remove_blob": partial(remove_blob, n_remove=2),
+            }[sampling_method]
+            x_sample = sampling_func(X[selected_idx])
 
-        # update hyper-params for quick re-run tsne
-        tsne_hyper_params.update(early_stop_hyper_params)
+            # update hyper-params for quick re-run tsne
+            tsne_hyper_params.update(early_stop_hyper_params)
 
-        # and ask tsne the corresponding embedding in LD
-        tick = time()
-        y_sample = query_blackbox_tsne(
-            X=X,
-            Y=Y,
-            query_idx=selected_idx,
-            query_points=x_sample,
-            sigma_LD=sigma_LD,
-            tsne_hyper_params=tsne_hyper_params,
-        )
-        print(f"[DEBUG] Query-blackbox for {i+1}th point in {time() - tick:.3f} seconds")
+            # and ask tsne the corresponding embedding in LD
+            tick = time()
+            y_sample = query_blackbox_tsne(
+                X=X,
+                Y=Y,
+                query_idx=selected_idx,
+                query_points=x_sample,
+                sigma_LD=sigma_LD,
+                tsne_hyper_params=tsne_hyper_params,
+            )
+            print(f"[DEBUG] Query-blackbox for {i+1}th point in {time() - tick:.3f} seconds")
 
-        x_samples.append(x_sample)
-        y_samples.append(y_sample)
+            x_samples.append(x_sample)
+            y_samples.append(y_sample)
 
-    x_samples = np.array(x_samples).reshape(-1, X.shape[1])
-    y_samples = np.array(y_samples).reshape(-1, Y.shape[1])
+        x_samples = np.array(x_samples).reshape(-1, X.shape[1])
+        y_samples = np.array(y_samples).reshape(-1, Y.shape[1])
+        joblib.dump((x_samples, y_samples), log_name_samples)
 
     return Y, x_samples, y_samples
 
 
 def query_blackbox_tsne(
-    X, Y, query_idx=None, query_points=None, sigma_LD=0.5, tsne_hyper_params={},
+    X, Y, query_idx=None, query_points=None, sigma_LD=0.5, tsne_hyper_params={}
 ):
     """Query-blackbox-like function for sample tsne embedding.
     Given the original `tsne` model (represented by (X, Y) pair),
@@ -134,7 +183,7 @@ def query_blackbox_tsne(
     return Y_with_sample[N:]
 
 
-def plot(Y, y_samples, selected_idx=[], labels=None, out_name="noname00"):
+def plot_with_samples(Y, y_samples, selected_idx=[], labels=None, out_name="noname00"):
     """Plot the original embedding `Y` with new sampled points `y_samples`
     """
     N = Y.shape[0]
@@ -162,18 +211,19 @@ def plot(Y, y_samples, selected_idx=[], labels=None, out_name="noname00"):
 
 if __name__ == "__main__":
     n_samples = 100  # number of points to sample
-    sigma_HD = 0.5  # larger of Gaussian in HD
+    sigma_HD = 0.75  # larger of Gaussian in HD
     sigma_LD = 1.0  # larger of Gaussian in LD
     N_max = 200  # maximum number of data points for testing only
     sampling_method = "sample_around"  # in ["sample_around", "sample_with_global_noise"]
-    dataset_name = "digits"
-    plot_dir = "./plots"
+    dataset_name = "MNIST"
+    plot_dir = f"./plots/{dataset_name}"
+    data_home = "./data"
     debug_level = 0
 
     # TODO check stability of sampling. (e.g. seed 1024 iris, 42 digits)
 
     # basic params to run tsne the first time
-    tsne_hyper_params = dict(perplexity=30, n_iter=1500, random_state=42, verbose=debug_level)
+    tsne_hyper_params = dict(perplexity=30, n_iter=1500, random_state=1024, verbose=debug_level)
 
     # to re-run tsne quickly, take the initial embedding as `init` and use the following params
     early_stop_hyper_params = dict(
@@ -206,5 +256,5 @@ if __name__ == "__main__":
     )
 
     # viz the original embedding with the new sampled points
-    out_name = f"{plot_dir}/{dataset_name}_with_sample.png"
-    plot(Y, y_samples, selected_idx, labels=labels, out_name=out_name)
+    out_name = f"{plot_dir}/{sigma_HD}-{sigma_LD}-{n_samples}_scatter.png"
+    plot_with_samples(Y, y_samples, selected_idx, labels=labels, out_name=out_name)
