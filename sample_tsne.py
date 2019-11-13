@@ -10,55 +10,14 @@ from time import time
 from functools import partial
 
 import numpy as np
-from matplotlib import pyplot as plt
-
 from sklearn.datasets import load_iris, load_digits
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 
-
-def sample_around(x, sigma=0.1, n_samples=1):
-    """Sample a new point around the given datapoint `x`
-    `x_sampled = x + epsilon`
-    epsilon is a isotropic gaussian noise with variance `sigma`
-    """
-    epsilon = (sigma ** 2) * np.random.randn(n_samples, len(x.shape))
-    return x + epsilon
-
-
-def sample_with_global_noise(x, data, factor=0.5, n_samples=1):
-    """Sample with global noise from the multivariate gaussian of HD `data` (denoted as `X`).
-    global noise `epsilon` ~ MVN(X.mu, X.sigma^2)
-    Given the input point `x`, return `x + epsilon`
-    """
-    mean = data.mean(axis=0)  # global mean of data according each feature
-    sigma = data.var(axis=0)  # sigma is variance, which is square of std
-    epsilon = np.random.multivariate_normal(mean=mean, cov=np.diag(sigma), size=n_samples)
-    return x + factor * epsilon
-
-
-def perturb_image(x, replace_rate=(1, 4)):
-    """Random remove some pixels in the input image `x`
-    The percent of removed pixels is in `replace_rate`.
-    """
-    replace_rate = 0.1 * np.random.randint(*replace_rate)
-    mask = np.random.choice([0, 1], size=x.shape, p=((1 - replace_rate), replace_rate))
-    x_new = x.copy()
-    x_new[mask.astype(np.bool)] = 0
-    return x_new.reshape(1, -1)
-
-
-def remove_blob(x, n_remove=1):
-    """Randomly remove some blobs with random size from the input image `x`
-    """
-    img_size = int(math.sqrt(len(x)))
-    x_new = x.copy().reshape(img_size, img_size)
-    for _ in range(n_remove):
-        col1, col2 = np.random.randint(0, img_size, size=2)
-        row1, row2 = np.random.randint(0, img_size, size=2)
-        x_new[min(row1, row2) : max(row1, row2), min(col1, col2) : max(col1, col2)] = 0
-    return x_new.reshape(1, -1)
+import utils
+from sampling import sample_around, sample_with_global_noise
+from sampling import perturb_image, remove_blob
 
 
 def tsne_sample_embedded_points(
@@ -70,7 +29,7 @@ def tsne_sample_embedded_points(
     tsne_hyper_params={},
     early_stop_hyper_params={},
     sampling_method="sample_around",
-    log_dir="./",
+    log_dir="",
     force_recompute=False,
 ):
     """Estimate sampled embedding in LD
@@ -101,7 +60,7 @@ def tsne_sample_embedded_points(
         Y = joblib.load(log_name_Y)
         print("[DEBUG] Reuse: ", log_name_Y)
     else:
-        tsne = TSNE(**tsne_hyper_params)
+        tsne = TSNE(init="pca", **tsne_hyper_params)  # pca init for more stable
         Y = tsne.fit_transform(X)
         joblib.dump(Y, log_name_Y)
         print("[DEBUG] Initial tsne model: ", tsne)
@@ -183,54 +142,32 @@ def query_blackbox_tsne(
     return Y_with_sample[N:]
 
 
-def plot_with_samples(Y, y_samples, selected_idx=[], labels=None, out_name="noname00"):
-    """Plot the original embedding `Y` with new sampled points `y_samples`
-    """
-    N = Y.shape[0]
-    fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(12, 6))
-
-    # plot the original embedding
-    ax0.scatter(Y[:, 0], Y[:, 1], c=labels, alpha=0.5, cmap="jet")
-    ax0.scatter(
-        Y[selected_idx, 0], Y[selected_idx, 1], marker="s", facecolors="None", edgecolors="b"
-    )
-
-    # plot the embedding with new samples
-    # Y_new, y_samples = Y_new_with_samples[:N], Y_new_with_samples[N:]
-    # print("[DEBUG] Plot: ", Y_new.shape, y_samples.shape)
-    # ax1.scatter(Y_new[:, 0], Y_new[:, 1], c=labels, alpha=0.5, cmap="jet")
-    ax1.scatter(Y[:, 0], Y[:, 1], c=labels, alpha=0.3, cmap="jet")
-    ax1.scatter(
-        Y[selected_idx, 0], Y[selected_idx, 1], marker="s", facecolors="None", edgecolors="b"
-    )
-    ax1.scatter(y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r")
-
-    fig.savefig(out_name)
-    plt.close(fig)
-
-
 if __name__ == "__main__":
-    n_samples = 100  # number of points to sample
-    sigma_HD = 0.75  # larger of Gaussian in HD
-    sigma_LD = 1.0  # larger of Gaussian in LD
+    # Demo how to run the sampling task
+    # For a full workflow, see `simpler_explainer.py`
+
+    n_samples = 10  # number of points to sample
+    sigma_HD = 1.0  # larger of Gaussian in HD
+    sigma_LD = 1.0  # larger of Gaussian in LD, has less effect when the re-run of tsne stable
     N_max = 200  # maximum number of data points for testing only
     sampling_method = "sample_around"  # in ["sample_around", "sample_with_global_noise"]
-    dataset_name = "MNIST"
+    dataset_name = "iris"
     plot_dir = f"./plots/{dataset_name}"
+    log_dir = f"./var/{dataset_name}"
     data_home = "./data"
     debug_level = 0
 
     # TODO check stability of sampling. (e.g. seed 1024 iris, 42 digits)
 
     # basic params to run tsne the first time
-    tsne_hyper_params = dict(perplexity=30, n_iter=1500, random_state=1024, verbose=debug_level)
+    tsne_hyper_params = dict(perplexity=30, n_iter=1500, random_state=42, verbose=debug_level)
 
     # to re-run tsne quickly, take the initial embedding as `init` and use the following params
     early_stop_hyper_params = dict(
         early_exaggeration=1,  # disable exaggeration
         n_iter_without_progress=50,
         min_grad_norm=1e-7,
-        n_iter=500,
+        n_iter=500,  # many iterations make the embedding of the sampled points more stable
         verbose=debug_level,
     )
 
@@ -253,8 +190,10 @@ if __name__ == "__main__":
         sigma_LD=sigma_LD,
         tsne_hyper_params=tsne_hyper_params,
         early_stop_hyper_params=early_stop_hyper_params,
+        log_dir=log_dir,
+        force_recompute=False,
     )
 
     # viz the original embedding with the new sampled points
     out_name = f"{plot_dir}/{sigma_HD}-{sigma_LD}-{n_samples}_scatter.png"
-    plot_with_samples(Y, y_samples, selected_idx, labels=labels, out_name=out_name)
+    utils.scatter_with_samples(Y, y_samples, selected_idx, labels=labels, out_name=out_name)
