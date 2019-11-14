@@ -37,6 +37,31 @@ def explain_samples(x_samples, y_samples):
     return reg.coef_
 
 
+def explain_samples_with_rotation(x_samples, y_samples):
+    def rotate_matrix(degree):
+        theta = np.radians(degree)
+        c, s = np.cos(theta), np.sin(theta)
+        return np.array(((c, -s), (s, c)))
+
+    # greedy search for best rotation angle
+    best_score = np.inf
+    best_W = None
+    best_angle = 0
+
+    for d in np.arange(0, 180, 1):
+        R = rotate_matrix(d)
+        y_rotated = R.dot(y_samples.T).T
+        reg = ElasticNet(alpha=1.0, l1_ratio=0.25).fit(x_samples, y_rotated)
+        score = reg.score(x_samples, y_rotated)
+        if score < best_score:
+            best_score = score
+            best_angle = d
+            best_W = reg.coef_
+
+    print(f"[Debug]: Best rotation: {best_angle} degree with score = {best_score:.3f}")
+    return best_W
+
+
 def test_remove_blob(x, n_repeat=16, n_remove=1):
     x_samples = []
     for i in range(n_repeat):
@@ -66,6 +91,7 @@ def run_explainer():
         early_stop_hyper_params=early_stop_hyper_params,
         log_dir=log_dir,
         force_recompute=force_recompute,
+        batch_mode=False,
     )
 
     # viz the original embedding with the new sampled points
@@ -74,7 +100,7 @@ def run_explainer():
     scatter_with_samples(Y, y_samples, selected_idx, labels=labels, out_name=out_name)
 
     # plot the weights of the linear model
-    W = explain_samples(x_samples, y_samples)
+    W = explain_samples_with_rotation(x_samples, y_samples)
     plot_heatmap(W, img=X_original[selected_idx], out_name=f"{out_name_prefix}_explanation.png")
 
     # show the sampled images in HD
@@ -83,7 +109,7 @@ def run_explainer():
 
 if __name__ == "__main__":
     # TODO: turn these variables to input arguments with argparse
-    n_samples = 200  # number of points to sample
+    n_samples = 100  # number of points to sample
     sigma_HD = 1.0  # larger of Gaussian in HD
     sigma_LD = 1.0  # larger of Gaussian in LD
     seed = 42  # for reproducing
