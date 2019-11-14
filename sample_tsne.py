@@ -81,7 +81,6 @@ def tsne_sample_embedded_points(
 
         # generate samples in HD
         x_samples = [sampling_func(X[selected_idx]) for _ in range(n_samples)]
-        x_samples = np.array(x_samples).reshape(-1, X.shape[1])
 
         # update hyper-params for quick re-run tsne
         tsne_hyper_params.update(early_stop_hyper_params)
@@ -116,9 +115,10 @@ def tsne_sample_embedded_points(
                     f"[DEBUG] Query-blackbox for {i+1}th point in {time() - tick:.3f} seconds"
                 )
                 y_samples.append(y_sample)
-            y_samples = np.array(y_samples).reshape(-1, Y.shape[1])
 
         # save the sampled points for latter use
+        x_samples = np.array(x_samples).reshape(-1, X.shape[1])
+        y_samples = np.array(y_samples).reshape(-1, Y.shape[1])
         joblib.dump((x_samples, y_samples), log_name_samples)
     return Y, x_samples, y_samples
 
