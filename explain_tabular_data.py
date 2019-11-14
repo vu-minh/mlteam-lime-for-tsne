@@ -49,21 +49,19 @@ def load_tabular_dataset(dataset_name="country", standardize=True):
     return X, labels, feature_names
 
 
-def plot_weights(W, feature_names, out_name="noname00"):
+def plot_weights(W, feature_names, score=0.0, rotation=0, out_name="noname00"):
     assert W is not None, "Error with linear model!"
     assert W.shape[1] == len(feature_names)
     n_cols = W.shape[0]
     fig, axes = plt.subplots(1, n_cols, figsize=(n_cols * 6, 6), sharey=True)
     for ax, weights in zip(axes.ravel(), W):
-
-        print(weights)
         y_pos = np.arange(len(feature_names))
         ax.barh(y_pos, weights)
         ax.set_yticks(y_pos)
         ax.set_yticklabels(feature_names)
         # ax.invert_yaxis()  # labels read top-to-bottom
         # ax.set_xlabel("Importance of features")
-
+    fig.suptitle(f"Best score = {score:.3f}, best rotation = {rotation} deg")
     fig.savefig(out_name)
     plt.close(fig)
 
@@ -76,10 +74,10 @@ if __name__ == "__main__":
     seed = 42  # for reproducing
     debug_level = 0  # verbose in tsne
     N_max = 500  # maximum number of data points for testing only
-    force_recompute = True  # use pre-calculated embedding and samples or recompute them
+    force_recompute = False  # use pre-calculated embedding and samples or recompute them
     sampling_method = "sample_around"  # add noise to selected point, works with tabular data
 
-    dataset_name = "iris"
+    dataset_name = "country"
     log_dir = f"./var/{dataset_name}"
     plot_dir = f"./plots/{dataset_name}"
     for a_dir in [plot_dir, log_dir]:
@@ -90,7 +88,7 @@ if __name__ == "__main__":
     np.random.seed(seed)
 
     # basic params to run tsne the first time
-    tsne_hyper_params = dict(perplexity=30, n_iter=1500, random_state=seed, verbose=debug_level)
+    tsne_hyper_params = dict(perplexity=10, n_iter=1500, random_state=seed, verbose=debug_level)
 
     # to re-run tsne quickly, take the initial embedding as `init` and use the following params
     early_stop_hyper_params = dict(
@@ -132,7 +130,7 @@ if __name__ == "__main__":
     )
 
     # apply the linear model for explaining the sampled points
-    W = explain_samples(
+    W, score, rotation = explain_samples(
         x_samples,
         y_samples,
         linear_model=LinearRegression(),  # ElasticNet(alpha=1.0, l1_ratio=0.1),
@@ -142,4 +140,4 @@ if __name__ == "__main__":
     # visualize the weights of the linear model
     # (show contribution of the most important features)
     out_name_W = f"{out_name_prefix}_explanation.png"
-    plot_weights(W, feature_names, out_name=out_name_W)
+    plot_weights(W, feature_names, score=score, rotation=rotation, out_name=out_name_W)
