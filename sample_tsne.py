@@ -31,6 +31,7 @@ def tsne_sample_embedded_points(
     sampling_method="sample_around",
     log_dir="",
     force_recompute=False,
+    batch_mode=False,
 ):
     """Estimate sampled embedding in LD
     Args:
@@ -70,40 +71,55 @@ def tsne_sample_embedded_points(
         x_samples, y_samples = joblib.load(log_name_samples)
         print("[DEBUG] Reuse: ", log_name_samples)
     else:
-        x_samples = []
-        y_samples = []
-        for i in range(n_samples):
-            # sample a point in HD
-            sampling_func = {
-                "sample_around": partial(sample_around, sigma=sigma_HD),
-                "sample_with_global_noise": partial(sample_with_global_noise, data=X),
-                "perturb_image": partial(perturb_image, replace_rate=(1, 9)),
-                "remove_blob": partial(remove_blob, n_remove=2),
-            }[sampling_method]
-            x_sample = sampling_func(X[selected_idx])
+        # prepare sampling function according to the chosen sampling method
+        sampling_func = {
+            "sample_around": partial(sample_around, sigma=sigma_HD),
+            "sample_with_global_noise": partial(sample_with_global_noise, data=X),
+            "perturb_image": partial(perturb_image, replace_rate=(1, 9)),
+            "remove_blob": partial(remove_blob, n_remove=2),
+        }[sampling_method]
 
-            # update hyper-params for quick re-run tsne
-            tsne_hyper_params.update(early_stop_hyper_params)
+        # generate samples in HD
+        x_samples = [sampling_func(X[selected_idx]) for _ in range(n_samples)]
+        x_samples = np.array(x_samples).reshape(-1, X.shape[1])
 
-            # and ask tsne the corresponding embedding in LD
+        # update hyper-params for quick re-run tsne
+        tsne_hyper_params.update(early_stop_hyper_params)
+
+        if batch_mode:
             tick = time()
-            y_sample = query_blackbox_tsne(
+            y_samples = query_blackbox_tsne(
                 X=X,
                 Y=Y,
                 query_idx=selected_idx,
-                query_points=x_sample,
+                query_points=x_samples,
                 sigma_LD=sigma_LD,
                 tsne_hyper_params=tsne_hyper_params,
             )
-            print(f"[DEBUG] Query-blackbox for {i+1}th point in {time() - tick:.3f} seconds")
+            print(
+                f"[DEBUG] Query-blackbox for {n_samples} points in {time() - tick:.3f} seconds"
+            )
+        else:
+            y_samples = []
+            for i, x_sample in enumerate(x_samples):
+                # ask tsne for the corresponding embedding of input sample
+                tick = time()
+                y_sample = query_blackbox_tsne(
+                    X=X,
+                    Y=Y,
+                    query_idx=selected_idx,
+                    query_points=x_sample,
+                    sigma_LD=sigma_LD,
+                    tsne_hyper_params=tsne_hyper_params,
+                )
+                print(
+                    f"[DEBUG] Query-blackbox for {i+1}th point in {time() - tick:.3f} seconds"
+                )
+                y_samples.append(y_sample)
+            y_samples = np.array(y_samples).reshape(-1, Y.shape[1])
 
-            x_samples.append(x_sample)
-            y_samples.append(y_sample)
-
-        x_samples = np.array(x_samples).reshape(-1, X.shape[1])
-        y_samples = np.array(y_samples).reshape(-1, Y.shape[1])
+        # save the sampled points for latter use
         joblib.dump((x_samples, y_samples), log_name_samples)
-
     return Y, x_samples, y_samples
 
 
@@ -129,17 +145,17 @@ def query_blackbox_tsne(
     # approximate the original tsne model by a new one with initialized embedding
     # given by the original model
     tsne = TSNE(init=Y_new, **tsne_hyper_params)
-    Y_with_sample = tsne._fit(X_new, skip_num_points=N)
+    Y_with_samples = tsne._fit(X_new, skip_num_points=N)
 
     # debug to see if the original embedding does not change (or change a little bit)
     # TODO: discuss if it is necessary to make the initial Y does not change
     if tsne_hyper_params.get("verbose", 0) > 0:
-        diff = Y - Y_with_sample[:N]
+        diff = Y - Y_with_samples[:N]
         print("[DEBUG] Check if the embedding for N original points does not change")
         print("Norm of diff: ", np.linalg.norm(diff))
         print("Sum square error: ", 0.5 * np.sum(np.dot(diff.T, diff)))
 
-    return Y_with_sample[N:]
+    return Y_with_samples[N:]
 
 
 if __name__ == "__main__":
