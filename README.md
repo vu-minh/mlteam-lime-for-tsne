@@ -1,8 +1,19 @@
 # mlteam-lime-for-tsne
-MLTeam: Apply LIME for t-SNE
+MLTeam: Apply LIME for t-SNE.
+
 The note for the meeting of our team is [here](meeting_notes.md)
 
 ![](LIME+tSNE.png)
+
+(TODO update this figure)
+
+
+## Progress notes:
++ 09/11/2019: Initial version for simple sampling with noise
++ 12/11/2019: Add other sampling methods for image data: perturb image with noise (remove pixel), remove blob(s) of random size.
++ 13/11/2019: Add a very simple (naive) explainer using Lasso/ElasticNet
++ 14/11/2019: Update plots for some image datasets to show: the scatter plot with samples, the samples input, the "important zone" found by the explainer. (not good for now)
+
 
 ## Some dev notes:
 We can add some note for environment configuration, hyperparameters, tip and tricks here.
@@ -25,20 +36,8 @@ git submodule update
 ```
 
 *Note on the stability of sampling method*:
-+ Update 12/11/2019: the sampling is now *NOT STABLE*
-+ The params using reproducing the samplings are:
-```
-iris dataset:
-	seed = 1024
-	sigma_HD = 0.25
-    sigma_LD = 0.5
++ ~~Update 12/11/2019: the sampling is now *NOT STABLE*~~ (re-run tsne for a little longer for stable embedding)
 
-digits dataset:
-	seed = 42
-	sigma_HD = 0.5
-    sigma_LD = 1.0
-
-```
 
 ### Using `sample_tsne`
 Goal: given a selected index of a point `selected_idx`, sample some points arround it in HD (`x_samples`) and ask tsne to calculate the embedding of these sampled points in LD (`y_samples`)
