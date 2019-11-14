@@ -19,46 +19,45 @@ from sampling import perturb_image, remove_blob
 from utils import scatter_with_samples, plot_samples, plot_heatmap
 
 
-def explain_samples(x_samples, y_samples):
+def explain_samples(x_samples, y_samples, linear_model, find_rotation=True, use_weight=True):
     """Naive explainer by a linear regression (LR) model.
     Note that, we do not use the intercept, so we should standardize the input.
     Args:
         x_samples: [n_samples x D]
         y_samples: [n_samples x 2]
+        find_rotation: bool default to True: find the best rotation of `y_samples`
+            that minimizes the `scores` of the linear model.
     Returns:
         weights of LR model (representing the importance of each pixel)
     """
-    # x_samples = StandardScaler().fit_transform(x_samples)
-    # x_samples = x_samples - x_samples.mean(axis=0, keepdims=True)
 
-    reg = ElasticNet(alpha=1.0, l1_ratio=0.25).fit(x_samples, y_samples)
-    # reg = Lasso(alpha=0.5).fit(x_samples, y_samples)
-    # reg = LinearRegression().fit(x_samples, y_samples)
-    return reg.coef_
-
-
-def explain_samples_with_rotation(x_samples, y_samples):
     def rotate_matrix(degree):
         theta = np.radians(degree)
         c, s = np.cos(theta), np.sin(theta)
         return np.array(((c, -s), (s, c)))
 
     # greedy search for best rotation angle
-    best_score = np.inf
+    best_score = -np.inf
     best_W = None
     best_angle = 0
 
-    for d in np.arange(0, 180, 1):
+    for d in np.arange(0, 180, 1) if find_rotation else [0]:
         R = rotate_matrix(d)
         y_rotated = R.dot(y_samples.T).T
-        reg = ElasticNet(alpha=1.0, l1_ratio=0.25).fit(x_samples, y_rotated)
+
+        # x_samples = StandardScaler().fit_transform(x_samples)
+        # x_samples = x_samples - x_samples.mean(axis=0, keepdims=True)
+
+        reg = linear_model.fit(x_samples, y_rotated)
         score = reg.score(x_samples, y_rotated)
-        if score < best_score:
+
+        if score >= best_score:
             best_score = score
             best_angle = d
             best_W = reg.coef_
 
     print(f"[Debug]: Best rotation: {best_angle} degree with score = {best_score:.3f}")
+
     return best_W
 
 
@@ -100,7 +99,7 @@ def run_explainer():
     scatter_with_samples(Y, y_samples, selected_idx, labels=labels, out_name=out_name)
 
     # plot the weights of the linear model
-    W = explain_samples_with_rotation(x_samples, y_samples)
+    W = explain_samples(x_samples, y_samples, linear_model=ElasticNet(alpha=1.0, l1_ratio=0.05))
     plot_heatmap(W, img=X_original[selected_idx], out_name=f"{out_name_prefix}_explanation.png")
 
     # show the sampled images in HD
@@ -120,7 +119,7 @@ if __name__ == "__main__":
     # sampling method in ["sample_around", "sample_with_global_noise", "perturb_image", "remove_blob"]
     sampling_method = "remove_blob"
     data_home = "./data"  # local data on my computer
-    dataset_name = "MNIST"
+    dataset_name = "FASHION500"
 
     plot_dir = f"./plots/{dataset_name}"
     log_dir = f"./var/{dataset_name}"
