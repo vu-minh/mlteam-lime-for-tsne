@@ -58,7 +58,7 @@ def explain_samples(x_samples, y_samples, linear_model, find_rotation=True, use_
 
     print(f"[Debug]: Best rotation: {best_angle} degree with score = {best_score:.3f}")
 
-    return best_W
+    return best_W, best_score, best_angle
 
 
 def test_remove_blob(x, n_repeat=16, n_remove=1):
