@@ -45,7 +45,7 @@ def plot_samples(samples, out_name="noname01"):
         ax.axis("off")
 
     for img, ax in zip(samples, axes.ravel()):
-        ax.imshow(img.reshape(img_size, img_size), cmap="binary")
+        ax.imshow(img.reshape(img_size, img_size), cmap="gray_r")
 
     fig.savefig(out_name)
     plt.close(fig)

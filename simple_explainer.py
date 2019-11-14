@@ -31,7 +31,9 @@ def explain_samples(x_samples, y_samples):
     # x_samples = StandardScaler().fit_transform(x_samples)
     # x_samples = x_samples - x_samples.mean(axis=0, keepdims=True)
 
-    reg = ElasticNet(alpha=0.5, l1_ratio=0.75).fit(x_samples, y_samples)
+    reg = ElasticNet(alpha=1.0, l1_ratio=0.25).fit(x_samples, y_samples)
+    # reg = Lasso(alpha=0.5).fit(x_samples, y_samples)
+    # reg = LinearRegression().fit(x_samples, y_samples)
     return reg.coef_
 
 
@@ -47,26 +49,6 @@ def run_explainer():
     """Test workflow: generate samples, apply a linear model and try to explain the weights
     Note: using global variables in __main__ (not good practice)
     """
-
-    # TODO check stability of sampling. (e.g. seed 1024 iris, 42 digits)
-    # set numpy random seed for reproducing
-    np.random.seed(seed)
-
-    # basic params to run tsne the first time
-    tsne_hyper_params = dict(perplexity=50, n_iter=1500, random_state=seed, verbose=debug_level)
-
-    # to re-run tsne quickly, take the initial embedding as `init` and use the following params
-    early_stop_hyper_params = dict(
-        early_exaggeration=1,  # disable exaggeration
-        n_iter_without_progress=50,
-        min_grad_norm=1e-7,
-        n_iter=1000,  # increase it to test stability
-        verbose=debug_level,
-    )
-
-    dataset.set_data_home(data_home)
-    X_original, X, labels = dataset.load_dataset(dataset_name)
-    X_original, X, labels = shuffle(X_original, X, labels, n_samples=N_max, random_state=seed)
 
     # select a point to sample in HD
     selected_idx = np.random.randint(X.shape[0])
@@ -101,10 +83,10 @@ def run_explainer():
 
 if __name__ == "__main__":
     # TODO: turn these variables to input arguments with argparse
-    n_samples = 10  # number of points to sample
-    sigma_HD = 0.5  # larger of Gaussian in HD
-    sigma_LD = 0.5  # larger of Gaussian in LD
-    seed = 8888  # for reproducing
+    n_samples = 200  # number of points to sample
+    sigma_HD = 1.0  # larger of Gaussian in HD
+    sigma_LD = 1.0  # larger of Gaussian in LD
+    seed = 42  # for reproducing
     debug_level = 0  # verbose in tsne
     N_max = 500  # maximum number of data points for testing only
     force_recompute = False  # use pre-calculated embedding and samples or recompute them
@@ -113,11 +95,32 @@ if __name__ == "__main__":
     sampling_method = "remove_blob"
     data_home = "./data"  # local data on my computer
     dataset_name = "MNIST"
+
     plot_dir = f"./plots/{dataset_name}"
     log_dir = f"./var/{dataset_name}"
     for a_dir in [plot_dir, log_dir]:
         if not os.path.exists(a_dir):
             os.mkdir(a_dir)
+
+    # TODO check stability of sampling. (e.g. seed 1024 iris, 42 digits)
+    # set numpy random seed for reproducing
+    np.random.seed(seed)
+
+    # basic params to run tsne the first time
+    tsne_hyper_params = dict(perplexity=30, n_iter=1500, random_state=seed, verbose=debug_level)
+
+    # to re-run tsne quickly, take the initial embedding as `init` and use the following params
+    early_stop_hyper_params = dict(
+        early_exaggeration=1,  # disable exaggeration
+        n_iter_without_progress=50,
+        min_grad_norm=1e-7,
+        n_iter=1000,  # increase it to test stability
+        verbose=debug_level,
+    )
+
+    dataset.set_data_home(data_home)
+    X_original, X, labels = dataset.load_dataset(dataset_name)
+    X_original, X, labels = shuffle(X_original, X, labels, n_samples=N_max, random_state=seed)
 
     run_explainer()
 
