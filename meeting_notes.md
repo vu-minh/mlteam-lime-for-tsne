@@ -3,17 +3,17 @@
 ## Meeting 12/11/2019
 
 #### What we've done:
-+ [ ] Very simple proptotype for sampling and approximate the embedding of new points for tSNE.
++ [X] Very simple proptotype for sampling and approximate the embedding of new points for tSNE.
 	* small problem: the sampled points are "too local" (the embedding of them are always centered around the selected point), the sampling process is not gauranteed to be stable.
 
-+ [ ] No competition method :D
++ [X] No competition method :D
 
-+ [ ] How LIME does evaluation:
++ [X] How LIME does evaluation:
 	* explain a white box model
 	* (to fix) repeatedly remove a subset of features to show how LIME explain the important features 
 	* add noise features and show that LIME does not take them into account
 
-+ [ ] (to fix) How LIME does sampling (for tabular data):
++ [X] (to fix) How LIME does sampling (for tabular data):
 	* it does global noise sampling: consider the whole dataset as a gaussian with a mean `mu` and variance `sigma`
 	* generate sample for a query point `x_i` by `x_i + mu + epsilon * sigma`
 	* construct a KNN and choose first `k` nearest neighbors are proposed samples for `x_i`
@@ -24,16 +24,16 @@
 	* one point for each class
 	* maybe the point in the "intersection" of different clusters zone in the visu
 
-+ [ ] Keep simple sampling strategy to obtain the embedding for the sampled points.
++ [X] Keep simple sampling strategy to obtain the embedding for the sampled points.
 
-+ [ ] Run the [linear model]() to explain the sampled points:
++ [X] Run the [linear model]() to explain the sampled points:
 	* Linear model returns matrix weights `W` indicating the importance of features
 	* Visualize `W`, e.g. as a 2D heatmap to see if we can find the interested zones
 
-+ [ ] Test with more tabular datasets which have clear/understandable features:
++ [-] Test with more tabular datasets which have clear/understandable features:
 	* Country, Boston, Wine, ...
 
-+ [ ] (OPTIONAL) Think about evaluation:
++ [0] (OPTIONAL) Think about evaluation:
 	* Can try our approach (if it works) to explain a whitebox model like PCA
 	* A usecase of Benoit: t-SNE returns a large, non-homogene cluster, how can we explain it. (The main focus is to explain *what does tSNE show?*)
 	* Can pre-sample uniformly many points in the dataset and find explanation for each point. (The user can explore the dataset and inverstigate the embedding of tSNE).
