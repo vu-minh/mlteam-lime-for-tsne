@@ -97,10 +97,10 @@ if __name__ == "__main__":
     seed = 42  # for reproducing
     debug_level = 0  # verbose in tsne
     N_max = 1000  # maximum number of data points for testing only
-    force_recompute = False  # use pre-calculated embedding and samples or recompute them
+    force_recompute = True  # use pre-calculated embedding and samples or recompute them
     sampling_method = "sample_around"  # add noise to selected point, works with tabular data
 
-    dataset_name = "country"
+    dataset_name = "wine"
     log_dir = f"./var/{dataset_name}"
     plot_dir = f"./plots/{dataset_name}"
     for a_dir in [plot_dir, log_dir]:
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     X, labels, feature_names = load_tabular_dataset(dataset_name, standardize=True)
 
     # select a (random) point to explain
-    selected_idx = 65  # np.random.randint(X.shape[0])
+    selected_idx = np.random.randint(X.shape[0])
     print("[DEBUG] selected point: ", selected_idx, labels[selected_idx])
 
     # run the full workflow with a chosen linear model
