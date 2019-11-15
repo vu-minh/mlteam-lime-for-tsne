@@ -112,7 +112,7 @@ if __name__ == "__main__":
     X_original, X, labels = shuffle(X_original, X, labels, n_samples=N_max, random_state=seed)
 
     # choose linear model
-    linear_model = Lasso(alpha=0.1)
+    linear_model = Lasso(alpha=0.05)
 
     # for each class, choose an example and run explainer
     all_indices = np.arange(X.shape[0])

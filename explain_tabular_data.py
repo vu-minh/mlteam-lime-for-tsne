@@ -52,15 +52,9 @@ def load_tabular_dataset(dataset_name="country", standardize=True):
     return X, label_names, feature_names
 
 
-def run_explainer(linear_model):
+def run_explainer(linear_model, selected_idx):
     """Run the full workflow to samples, do embedding and apply the `linear_model`
     """
-    # load the chosen dataset
-    X, labels, feature_names = load_tabular_dataset(dataset_name, standardize=True)
-
-    # select a (random) point to explain
-    selected_idx = np.random.randint(X.shape[0])
-    print("[DEBUG] selected point: ", selected_idx, labels[selected_idx])
 
     # apply the workflow for generating the samples in HD and embed them in LD
     Y, x_samples, y_samples = tsne_sample_embedded_points(
@@ -106,7 +100,7 @@ if __name__ == "__main__":
     force_recompute = False  # use pre-calculated embedding and samples or recompute them
     sampling_method = "sample_around"  # add noise to selected point, works with tabular data
 
-    dataset_name = "iris"
+    dataset_name = "country"
     log_dir = f"./var/{dataset_name}"
     plot_dir = f"./plots/{dataset_name}"
     for a_dir in [plot_dir, log_dir]:
@@ -118,7 +112,7 @@ if __name__ == "__main__":
 
     # basic params to run tsne the first time
     tsne_hyper_params = dict(
-        method="exact", perplexity=10, n_iter=1000, random_state=seed, verbose=debug_level
+        method="exact", perplexity=10, n_iter=1000, random_state=42, verbose=debug_level
     )
 
     # to re-run tsne quickly, take the initial embedding as `init` and use the following params
@@ -130,8 +124,15 @@ if __name__ == "__main__":
         verbose=debug_level,
     )
 
+    # load the chosen dataset
+    X, labels, feature_names = load_tabular_dataset(dataset_name, standardize=True)
+
+    # select a (random) point to explain
+    selected_idx = 65  # np.random.randint(X.shape[0])
+    print("[DEBUG] selected point: ", selected_idx, labels[selected_idx])
+
     # run the full workflow with a chosen linear model
-    linear_model = Lasso(fit_intercept=False, alpha=0.015)
+    linear_model = Lasso(fit_intercept=False, alpha=0.25)
     # Lasso(fit_intercept=False, alpha=0.015)
     # ElasticNet(alpha=2.0, l1_ratio=0.1),
-    run_explainer(linear_model)
+    run_explainer(linear_model, selected_idx=int(selected_idx))
