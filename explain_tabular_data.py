@@ -14,7 +14,7 @@ from sklearn.datasets import load_wine, load_iris, load_boston
 from sklearn.preprocessing import StandardScaler, Normalizer
 from sklearn.linear_model import Lasso, ElasticNet, Ridge, LinearRegression
 
-from utils import scatter_with_samples
+from utils import scatter_with_samples, plot_weights
 
 
 def load_country():
@@ -52,23 +52,6 @@ def load_tabular_dataset(dataset_name="country", standardize=True):
     return X, label_names, feature_names
 
 
-def plot_weights(W, feature_names, score=0.0, rotation=0, out_name="noname00"):
-    assert W is not None, "Error with linear model!"
-    assert W.shape[1] == len(feature_names)
-    n_cols = W.shape[0]
-    fig, axes = plt.subplots(1, n_cols, figsize=(n_cols * 6, 6), sharey=True)
-    for ax, weights in zip(axes.ravel(), W):
-        y_pos = np.arange(len(feature_names))
-        ax.barh(y_pos, weights)
-        ax.set_yticks(y_pos)
-        ax.set_yticklabels(feature_names)
-        ax.invert_yaxis()  # labels read top-to-bottom
-        # ax.set_xlabel("Importance of features")
-    fig.suptitle(f"Best score $R^2$ = {score:.3f}, best rotation = {rotation} deg")
-    fig.savefig(out_name)
-    plt.close(fig)
-
-
 if __name__ == "__main__":
     # define the variables for the dataset name, number of samples, ...
     n_samples = 100  # number of points to sample
@@ -91,7 +74,9 @@ if __name__ == "__main__":
     np.random.seed(seed)
 
     # basic params to run tsne the first time
-    tsne_hyper_params = dict(perplexity=10, n_iter=1000, random_state=seed, verbose=debug_level)
+    tsne_hyper_params = dict(
+        method="exact", perplexity=10, n_iter=1000, random_state=seed, verbose=debug_level
+    )
 
     # to re-run tsne quickly, take the initial embedding as `init` and use the following params
     early_stop_hyper_params = dict(
@@ -134,13 +119,14 @@ if __name__ == "__main__":
     W, score, rotation = explain_samples(
         x_samples,
         y_samples,
-        linear_model=Lasso(
-            fit_intercept=False, alpha=0.025
-        ),  # ElasticNet(alpha=2.0, l1_ratio=0.1),
+        linear_model=Lasso(fit_intercept=False, alpha=0.015),
+        # LinearRegression(),
+        # ElasticNet(alpha=2.0, l1_ratio=0.1),
         find_rotation=True,
     )
 
     # visualize the weights of the linear model
     # (show contribution of the most important features)
     out_name_W = f"{out_name_prefix}_explanation.png"
-    plot_weights(W, feature_names, score=score, rotation=rotation, out_name=out_name_W)
+    title = f"Best score $R^2$ = {score:.3f}, best rotation = {rotation} deg"
+    plot_weights(W, feature_names, title=title, out_name=out_name_W)
