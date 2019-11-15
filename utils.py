@@ -75,7 +75,7 @@ def transparent_cmap(cmap, N=255):
     return mycmap
 
 
-def plot_heatmap(W, img=None, out_name="noname00"):
+def plot_heatmap(W, img=None, title="", out_name="noname00"):
     """Plot heatmap to visualize the weights `W`
     Args:
         W: [2xD], D: dimensionality of input image, which is `img_size x img_size`
@@ -92,5 +92,33 @@ def plot_heatmap(W, img=None, out_name="noname00"):
             W[i, :].reshape(img_size, img_size), cmap=transparent_cmap(plt.cm.inferno)
         )
         fig.colorbar(heatmap, ax=ax)
+
+    plt.suptitle(title)
+    fig.savefig(out_name)
+    plt.close(fig)
+
+
+def plot_weights(W, feature_names=None, title="", out_name="noname00"):
+    """Plot importance (weights) of each feature
+    Args:
+        W: [2xD]
+        feature_names: [D,]
+    """
+    assert W is not None, "Error with linear model!"
+
+    if feature_names is None:
+        feature_names = [f"f{i+1}" for i in range(W.shape[1])]
+
+    n_cols = W.shape[0]
+    fig, axes = plt.subplots(1, n_cols, figsize=(n_cols * 6, 6), sharey=True)
+    for ax, weights in zip(axes.ravel(), W):
+        y_pos = np.arange(len(feature_names))
+        ax.barh(y_pos, weights)
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(feature_names)
+        ax.invert_yaxis()  # labels read top-to-bottom
+        # ax.set_xlabel("Importance of features")
+
+    fig.suptitle(title)
     fig.savefig(out_name)
     plt.close(fig)
