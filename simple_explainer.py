@@ -99,7 +99,9 @@ def run_explainer():
     scatter_with_samples(Y, y_samples, selected_idx, labels=labels, out_name=out_name)
 
     # plot the weights of the linear model
-    W = explain_samples(x_samples, y_samples, linear_model=ElasticNet(alpha=1.0, l1_ratio=0.05))
+    W, score, rotation = explain_samples(
+        x_samples, y_samples, linear_model=ElasticNet(alpha=1.0, l1_ratio=0.05)
+    )
     plot_heatmap(W, img=X_original[selected_idx], out_name=f"{out_name_prefix}_explanation.png")
 
     # show the sampled images in HD
