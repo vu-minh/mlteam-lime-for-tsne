@@ -10,26 +10,20 @@ from matplotlib import pyplot as plt
 
 from sample_tsne import tsne_sample_embedded_points
 from simple_explainer import explain_samples
-from sklearn.datasets import load_wine, load_iris
+from sklearn.datasets import load_wine, load_iris, load_boston
 from sklearn.preprocessing import StandardScaler, Normalizer
 from sklearn.linear_model import Lasso, ElasticNet, Ridge, LinearRegression
 
 from utils import scatter_with_samples_with_text
 
 
-def _load_country():
+def load_country():
     data = joblib.load("./dataset/country.dat")
-    return data["X"], data["country_names"], data["indicator_names"]
-
-
-def _load_wine():
-    data = load_wine()
-    return data["data"], data["target"], data["feature_names"]
-
-
-def _load_iris():
-    data = load_iris()
-    return data["data"], data["target"], data["feature_names"]
+    return {
+        "data": data["X"],
+        "target_names": data["country_names"],
+        "feature_names": data["indicator_descriptions"],
+    }
 
 
 def load_tabular_dataset(dataset_name="country", standardize=True):
@@ -39,14 +33,23 @@ def load_tabular_dataset(dataset_name="country", standardize=True):
         labels: [N]
         feature_names: [D]
     """
-    load_func = {"country": _load_country, "wine": _load_wine, "iris": _load_iris}[dataset_name]
+    load_func = {
+        "country": load_country,
+        "wine": load_wine,
+        "iris": load_iris,
+        "boston": load_boston,
+    }[dataset_name]
 
-    X, labels, feature_names = load_func()
+    data = load_func()
+    X, label_names, feature_names = (
+        data["data"],
+        data["target_names"],
+        data["feature_names"],
+    )
     if standardize:
         X = StandardScaler().fit_transform(X)
-        # X = Normalizer().fit_transform(X)
-        # X -= X.mean(axis=0, keepdims=True)
-    return X, labels, feature_names
+
+    return X, label_names, feature_names
 
 
 def plot_weights(W, feature_names, score=0.0, rotation=0, out_name="noname00"):
