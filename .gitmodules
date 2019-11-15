@@ -1,6 +1,3 @@
 [submodule "common"]
 	path = common
 	url = https://github.com/vu-minh/py-common.git
-[submodule "BIR"]
-	path = BIR
-	url = https://github.com/AdrienBibal/BIR.git
