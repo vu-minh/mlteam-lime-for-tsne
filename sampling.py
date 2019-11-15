@@ -4,6 +4,7 @@
 
 import math
 import numpy as np
+from scipy.spatial.distance import cdist
 
 
 def sample_around(x, sigma=0.1, n_samples=1):
@@ -47,3 +48,38 @@ def remove_blob(x, n_remove=1):
         row1, row2 = np.random.randint(0, img_size, size=2)
         x_new[min(row1, row2) : max(row1, row2), min(col1, col2) : max(col1, col2)] = 0
     return x_new.reshape(1, -1)
+
+
+def generate_samples_HD(
+    selected_point, sampling_method="sample_around", sigma_HD=1.0, n_samples=100
+):
+    """Generate `n_samples` "around" the `selected_point`
+    """
+    sampling_func = {
+        "sample_around": partial(sample_around, sigma=sigma_HD),
+        "perturb_image": partial(perturb_image, replace_rate=(1, 9)),
+        "remove_blob": partial(remove_blob, n_remove=2),
+    }[sampling_method]
+    return [sampling_func(selected_point) for _ in range(n_samples)]
+
+
+def generate_samples_SMOTE(selected_id, X, k_nearbors=10, n_samples=100):
+    """Mimic SMOTE to generate sample between `selected_id`
+        and one of its `k_neighbors`
+    """
+    # distance from the selected points to all other points in HD
+    dist = cdist(X[selected_id].reshape(1, -1), X)
+    neighbor_ids = np.argsort(dist)[0, 1 : k_nearbors + 1]
+    print("[DEBUG] List neighbors: ", neighbor_ids)
+
+    n_samples_per_pair = n_samples // k_nearbors
+    x_samples = []
+    for neighbor_idx in neighbor_ids:
+        diff = X[neighbor_idx] - X[selected_id]
+        for _ in range(n_samples_per_pair):
+            alpha = np.random.rand()
+            x_sample = X[selected_id] + alpha * diff
+            x_samples.append(x_sample.reshape(1, -1))
+
+    print("[DEBUG] Generated samples: ", len(x_samples))
+    return x_samples
