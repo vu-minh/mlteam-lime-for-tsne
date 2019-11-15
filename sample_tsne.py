@@ -14,15 +14,16 @@ from sklearn.datasets import load_iris, load_digits
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 import utils
-from sampling import sample_around, sample_with_global_noise
-from sampling import perturb_image, remove_blob
+from sampling import sample_around
+from sampling import generate_samples_HD, generate_samples_SMOTE
 from modified_tsne import modifiedTSNE
 
 
 def tsne_sample_embedded_points(
     X,
     selected_idx,
-    n_samples=10,
+    n_samples=100,
+    n_neighbors_SMOTE=10,
     sigma_HD=0.1,
     sigma_LD=0.1,
     tsne_hyper_params={},
@@ -36,6 +37,7 @@ def tsne_sample_embedded_points(
     Args:
         X: input data [N, D]
         n_samples: number of points to sample around a selected point
+        n_neighbors_SMOTE: number of neighbors in HD to perform oversampling w. SMOTE
         sigma_HD: variance for noise in HD
         sigma_LD: variance for noise in LD
         tsne_hyper_params: dict of tsne hyper-params.
@@ -70,16 +72,12 @@ def tsne_sample_embedded_points(
         x_samples, y_samples = joblib.load(log_name_samples)
         print("[DEBUG] Reuse: ", log_name_samples)
     else:
-        # prepare sampling function according to the chosen sampling method
-        sampling_func = {
-            "sample_around": partial(sample_around, sigma=sigma_HD),
-            "sample_with_global_noise": partial(sample_with_global_noise, data=X),
-            "perturb_image": partial(perturb_image, replace_rate=(1, 9)),
-            "remove_blob": partial(remove_blob, n_remove=2),
-        }[sampling_method]
 
         # generate samples in HD
-        x_samples = [sampling_func(X[selected_idx]) for _ in range(n_samples)]
+        # x_samples = generate_samples_HD(selected_point=X[selected_idx])
+        x_samples = generate_samples_SMOTE(
+            selected_idx, X, k_nearbors=n_neighbors_SMOTE, n_samples=n_samples
+        )
 
         # update hyper-params for quick re-run tsne
         tsne_hyper_params.update(early_stop_hyper_params)
@@ -151,60 +149,3 @@ def query_blackbox_tsne(
         print("Sum square error: ", 0.5 * np.sum(np.dot(diff.T, diff)))
 
     return Y_with_samples[N:]
-
-
-if __name__ == "__main__":
-    # Demo how to run the sampling task
-    # For a full workflow, see `simpler_explainer.py`
-
-    n_samples = 10  # number of points to sample
-    sigma_HD = 1.0  # larger of Gaussian in HD
-    sigma_LD = 1.0  # larger of Gaussian in LD, has less effect when the re-run of tsne stable
-    N_max = 200  # maximum number of data points for testing only
-    sampling_method = "sample_around"  # in ["sample_around", "sample_with_global_noise"]
-    dataset_name = "iris"
-    plot_dir = f"./plots/{dataset_name}"
-    log_dir = f"./var/{dataset_name}"
-    data_home = "./data"
-    debug_level = 0
-
-    # TODO check stability of sampling. (e.g. seed 1024 iris, 42 digits)
-
-    # basic params to run tsne the first time
-    tsne_hyper_params = dict(perplexity=30, n_iter=1500, random_state=42, verbose=debug_level)
-
-    # to re-run tsne quickly, take the initial embedding as `init` and use the following params
-    early_stop_hyper_params = dict(
-        early_exaggeration=1,  # disable exaggeration
-        n_iter_without_progress=50,
-        min_grad_norm=1e-7,
-        n_iter=500,  # many iterations make the embedding of the sampled points more stable
-        verbose=debug_level,
-    )
-
-    X, labels = {"iris": load_iris, "digits": load_digits}[dataset_name](return_X_y=True)
-    X, labels = X[:N_max], labels[:N_max]
-    X = StandardScaler().fit_transform(X)
-
-    # set numpy random seed for reproducing
-    np.random.seed(seed=tsne_hyper_params.get("random_state", 42))
-
-    # select a point to sample in HD
-    selected_idx = np.random.randint(X.shape[0])
-
-    # create new samples in HD and embed them in LD
-    Y, x_samples, y_samples = tsne_sample_embedded_points(
-        X,
-        selected_idx=selected_idx,
-        n_samples=n_samples,
-        sigma_HD=sigma_HD,
-        sigma_LD=sigma_LD,
-        tsne_hyper_params=tsne_hyper_params,
-        early_stop_hyper_params=early_stop_hyper_params,
-        log_dir=log_dir,
-        force_recompute=False,
-    )
-
-    # viz the original embedding with the new sampled points
-    out_name = f"{plot_dir}/{sigma_HD}-{sigma_LD}-{n_samples}_scatter.png"
-    utils.scatter_with_samples(Y, y_samples, selected_idx, labels=labels, out_name=out_name)
