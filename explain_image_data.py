@@ -141,7 +141,9 @@ if __name__ == "__main__":
     np.random.seed(seed)
 
     # basic params to run tsne the first time
-    tsne_hyper_params = dict(perplexity=30, n_iter=1500, random_state=seed, verbose=debug_level)
+    tsne_hyper_params = dict(
+        method="barnes_hut", perplexity=30, n_iter=1500, random_state=seed, verbose=debug_level
+    )
 
     # to re-run tsne quickly, take the initial embedding as `init` and use the following params
     early_stop_hyper_params = dict(
