@@ -12,12 +12,11 @@ from functools import partial
 import numpy as np
 from sklearn.datasets import load_iris, load_digits
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.manifold import TSNE
-from sklearn.decomposition import PCA
 
 import utils
 from sampling import sample_around, sample_with_global_noise
 from sampling import perturb_image, remove_blob
+from modified_tsne import modifiedTSNE
 
 
 def tsne_sample_embedded_points(
@@ -61,7 +60,7 @@ def tsne_sample_embedded_points(
         Y = joblib.load(log_name_Y)
         print("[DEBUG] Reuse: ", log_name_Y)
     else:
-        tsne = TSNE(init="pca", **tsne_hyper_params)  # pca init for more stable
+        tsne = modifiedTSNE(init="pca", **tsne_hyper_params)  # pca init for more stable
         Y = tsne.fit_transform(X)
         joblib.dump(Y, log_name_Y)
         print("[DEBUG] Initial tsne model: ", tsne)
@@ -95,9 +94,7 @@ def tsne_sample_embedded_points(
                 sigma_LD=sigma_LD,
                 tsne_hyper_params=tsne_hyper_params,
             )
-            print(
-                f"[DEBUG] Query-blackbox for {n_samples} points in {time() - tick:.3f} seconds"
-            )
+            print(f"[DEBUG] Query-blackbox for {n_samples} points in {time() - tick:.3f} s")
         else:
             y_samples = []
             for i, x_sample in enumerate(x_samples):
@@ -111,9 +108,7 @@ def tsne_sample_embedded_points(
                     sigma_LD=sigma_LD,
                     tsne_hyper_params=tsne_hyper_params,
                 )
-                print(
-                    f"[DEBUG] Query-blackbox for {i+1}th point in {time() - tick:.3f} seconds"
-                )
+                print(f"[DEBUG] Query-blackbox for {i+1}th point in {time() - tick:.3f} s")
                 y_samples.append(y_sample)
 
         # save the sampled points for latter use
@@ -144,7 +139,7 @@ def query_blackbox_tsne(
 
     # approximate the original tsne model by a new one with initialized embedding
     # given by the original model
-    tsne = TSNE(init=Y_new, **tsne_hyper_params)
+    tsne = modifiedTSNE(init=Y_new, **tsne_hyper_params)
     Y_with_samples = tsne._fit(X_new, skip_num_points=N)
 
     # debug to see if the original embedding does not change (or change a little bit)

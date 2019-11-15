@@ -99,8 +99,17 @@ def run_explainer():
     scatter_with_samples(Y, y_samples, selected_idx, labels=labels, out_name=out_name)
 
     # plot the weights of the linear model
-    W = explain_samples(x_samples, y_samples, linear_model=ElasticNet(alpha=1.0, l1_ratio=0.05))
-    plot_heatmap(W, img=X_original[selected_idx], out_name=f"{out_name_prefix}_explanation.png")
+    W, score, rotation = explain_samples(
+        x_samples, y_samples, linear_model=ElasticNet(alpha=1.0, l1_ratio=0.05)
+    )
+    title = f"Best score $R^2$ = {score:.3f}, best rotation = {rotation} deg"
+    plot_heatmap(
+        W,
+        img=X_original[selected_idx],
+        title=title,
+        out_name=f"{out_name_prefix}_explanation.png",
+    )
+    plot_heatmap(W, img=None, title=title, out_name=f"{out_name_prefix}_explanation2.png")
 
     # show the sampled images in HD
     plot_samples(x_samples, out_name=f"{out_name_prefix}_samples.png")
@@ -108,7 +117,7 @@ def run_explainer():
 
 if __name__ == "__main__":
     # TODO: turn these variables to input arguments with argparse
-    n_samples = 100  # number of points to sample
+    n_samples = 50  # number of points to sample
     sigma_HD = 1.0  # larger of Gaussian in HD
     sigma_LD = 1.0  # larger of Gaussian in LD
     seed = 42  # for reproducing
@@ -132,7 +141,9 @@ if __name__ == "__main__":
     np.random.seed(seed)
 
     # basic params to run tsne the first time
-    tsne_hyper_params = dict(perplexity=30, n_iter=1500, random_state=seed, verbose=debug_level)
+    tsne_hyper_params = dict(
+        method="barnes_hut", perplexity=30, n_iter=1500, random_state=seed, verbose=debug_level
+    )
 
     # to re-run tsne quickly, take the initial embedding as `init` and use the following params
     early_stop_hyper_params = dict(
