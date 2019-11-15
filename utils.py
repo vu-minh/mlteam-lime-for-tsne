@@ -46,32 +46,6 @@ def scatter_with_samples(
     plt.close(fig)
 
 
-# def scatter_with_samples(Y, y_samples, selected_idx=[], labels=None, out_name="noname00"):
-#     """Plot the original embedding `Y` with new sampled points `y_samples`
-#     """
-#     N = Y.shape[0]
-#     fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(12, 6))
-
-#     # plot the original embedding
-#     ax0.scatter(Y[:, 0], Y[:, 1], c=labels, alpha=0.5, cmap="jet")
-#     ax0.scatter(
-#         Y[selected_idx, 0], Y[selected_idx, 1], marker="s", facecolors="None", edgecolors="b"
-#     )
-
-#     # plot the embedding with new samples
-#     # Y_new, y_samples = Y_new_with_samples[:N], Y_new_with_samples[N:]
-#     # print("[DEBUG] Plot: ", Y_new.shape, y_samples.shape)
-#     # ax1.scatter(Y_new[:, 0], Y_new[:, 1], c=labels, alpha=0.5, cmap="jet")
-#     ax1.scatter(Y[:, 0], Y[:, 1], c=labels, alpha=0.3, cmap="jet")
-#     ax1.scatter(
-#         Y[selected_idx, 0], Y[selected_idx, 1], marker="s", facecolors="None", edgecolors="b"
-#     )
-#     ax1.scatter(y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r")
-
-#     fig.savefig(out_name)
-#     plt.close(fig)
-
-
 def plot_samples(samples, out_name="noname01"):
     """Plot sampled images in a grid of subplots
     """
