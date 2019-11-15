@@ -8,36 +8,19 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-def scatter_with_samples_with_text(
-    Y, y_samples, selected_idx=[], texts=None, out_name="noname00"
+def scatter_with_samples(
+    Y,
+    y_samples=None,
+    selected_idx=[],
+    labels=None,
+    texts=None,
+    text_length=3,
+    out_name="noname00",
 ):
     """Plot the original embedding `Y` with new sampled points `y_samples`
-    """
-    N = Y.shape[0]
-    fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(12, 6))
-
-    # plot the original embedding
-    ax0.scatter(Y[:, 0], Y[:, 1], c=None, alpha=0.5, cmap="jet")
-    ax0.scatter(
-        Y[selected_idx, 0], Y[selected_idx, 1], marker="s", facecolors="None", edgecolors="b"
-    )
-    if texts is not None:
-        for i, text in enumerate(texts):
-            ax0.text(x=Y[i, 0], y=Y[i, 1], s=str(text)[:3])
-
-    # plot the embedding with new samples
-    ax1.scatter(Y[:, 0], Y[:, 1], c=None, alpha=0.3, cmap="jet")
-    ax1.scatter(
-        Y[selected_idx, 0], Y[selected_idx, 1], marker="s", facecolors="None", edgecolors="b"
-    )
-    ax1.scatter(y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r")
-
-    fig.savefig(out_name)
-    plt.close(fig)
-
-
-def scatter_with_samples(Y, y_samples, selected_idx=[], labels=None, out_name="noname00"):
-    """Plot the original embedding `Y` with new sampled points `y_samples`
+    Can plot with numeric labels of points if `labels` is not None,
+    and/or with text if `texts` is not None.
+    The number of character of text is set by `text_length`
     """
     N = Y.shape[0]
     fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(12, 6))
@@ -47,19 +30,46 @@ def scatter_with_samples(Y, y_samples, selected_idx=[], labels=None, out_name="n
     ax0.scatter(
         Y[selected_idx, 0], Y[selected_idx, 1], marker="s", facecolors="None", edgecolors="b"
     )
+    if texts is not None:
+        for i, text in enumerate(texts):
+            ax0.text(x=Y[i, 0], y=Y[i, 1], s=str(text)[:text_length])
 
     # plot the embedding with new samples
-    # Y_new, y_samples = Y_new_with_samples[:N], Y_new_with_samples[N:]
-    # print("[DEBUG] Plot: ", Y_new.shape, y_samples.shape)
-    # ax1.scatter(Y_new[:, 0], Y_new[:, 1], c=labels, alpha=0.5, cmap="jet")
     ax1.scatter(Y[:, 0], Y[:, 1], c=labels, alpha=0.3, cmap="jet")
     ax1.scatter(
         Y[selected_idx, 0], Y[selected_idx, 1], marker="s", facecolors="None", edgecolors="b"
     )
-    ax1.scatter(y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r")
+    if y_samples is not None:
+        ax1.scatter(y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r")
 
     fig.savefig(out_name)
     plt.close(fig)
+
+
+# def scatter_with_samples(Y, y_samples, selected_idx=[], labels=None, out_name="noname00"):
+#     """Plot the original embedding `Y` with new sampled points `y_samples`
+#     """
+#     N = Y.shape[0]
+#     fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(12, 6))
+
+#     # plot the original embedding
+#     ax0.scatter(Y[:, 0], Y[:, 1], c=labels, alpha=0.5, cmap="jet")
+#     ax0.scatter(
+#         Y[selected_idx, 0], Y[selected_idx, 1], marker="s", facecolors="None", edgecolors="b"
+#     )
+
+#     # plot the embedding with new samples
+#     # Y_new, y_samples = Y_new_with_samples[:N], Y_new_with_samples[N:]
+#     # print("[DEBUG] Plot: ", Y_new.shape, y_samples.shape)
+#     # ax1.scatter(Y_new[:, 0], Y_new[:, 1], c=labels, alpha=0.5, cmap="jet")
+#     ax1.scatter(Y[:, 0], Y[:, 1], c=labels, alpha=0.3, cmap="jet")
+#     ax1.scatter(
+#         Y[selected_idx, 0], Y[selected_idx, 1], marker="s", facecolors="None", edgecolors="b"
+#     )
+#     ax1.scatter(y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r")
+
+#     fig.savefig(out_name)
+#     plt.close(fig)
 
 
 def plot_samples(samples, out_name="noname01"):
