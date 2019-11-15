@@ -14,7 +14,7 @@ from sklearn.datasets import load_wine, load_iris, load_boston
 from sklearn.preprocessing import StandardScaler, Normalizer
 from sklearn.linear_model import Lasso, ElasticNet, Ridge, LinearRegression
 
-from utils import scatter_with_samples_with_text
+from utils import scatter_with_samples
 
 
 def load_country():
@@ -62,21 +62,21 @@ def plot_weights(W, feature_names, score=0.0, rotation=0, out_name="noname00"):
         ax.barh(y_pos, weights)
         ax.set_yticks(y_pos)
         ax.set_yticklabels(feature_names)
-        # ax.invert_yaxis()  # labels read top-to-bottom
+        ax.invert_yaxis()  # labels read top-to-bottom
         # ax.set_xlabel("Importance of features")
-    fig.suptitle(f"Best score = {score:.3f}, best rotation = {rotation} deg")
+    fig.suptitle(f"Best score $R^2$ = {score:.3f}, best rotation = {rotation} deg")
     fig.savefig(out_name)
     plt.close(fig)
 
 
 if __name__ == "__main__":
     # define the variables for the dataset name, number of samples, ...
-    n_samples = 50  # number of points to sample
-    sigma_HD = 0.25  # larger of Gaussian in HD
-    sigma_LD = 0.5  # larger of Gaussian in LD
-    seed = 42  # for reproducing
+    n_samples = 100  # number of points to sample
+    sigma_HD = 1.0  # larger of Gaussian in HD
+    sigma_LD = 1.0  # larger of Gaussian in LD
+    seed = 1024  # for reproducing
     debug_level = 0  # verbose in tsne
-    N_max = 500  # maximum number of data points for testing only
+    N_max = 1000  # maximum number of data points for testing only
     force_recompute = False  # use pre-calculated embedding and samples or recompute them
     sampling_method = "sample_around"  # add noise to selected point, works with tabular data
 
@@ -91,14 +91,14 @@ if __name__ == "__main__":
     np.random.seed(seed)
 
     # basic params to run tsne the first time
-    tsne_hyper_params = dict(perplexity=10, n_iter=1500, random_state=seed, verbose=debug_level)
+    tsne_hyper_params = dict(perplexity=10, n_iter=1000, random_state=seed, verbose=debug_level)
 
     # to re-run tsne quickly, take the initial embedding as `init` and use the following params
     early_stop_hyper_params = dict(
         early_exaggeration=1,  # disable exaggeration
         n_iter_without_progress=100,
         min_grad_norm=1e-7,
-        n_iter=1500,  # increase it to test stability
+        n_iter=500,  # increase it to test stability
         verbose=debug_level,
     )
 
@@ -128,15 +128,15 @@ if __name__ == "__main__":
     out_name_prefix = f"{plot_dir}/{sigma_HD}-{sigma_LD}-{n_samples}"
     out_name_Y = f"{out_name_prefix}_scatter.png"
     # TODO show the country with name or numeric `labels`
-    scatter_with_samples_with_text(
-        Y, y_samples, selected_idx, texts=labels, out_name=out_name_Y
-    )
+    scatter_with_samples(Y, y_samples, selected_idx, texts=labels, out_name=out_name_Y)
 
     # apply the linear model for explaining the sampled points
     W, score, rotation = explain_samples(
         x_samples,
         y_samples,
-        linear_model=LinearRegression(),  # ElasticNet(alpha=1.0, l1_ratio=0.1),
+        linear_model=Lasso(
+            fit_intercept=False, alpha=0.025
+        ),  # ElasticNet(alpha=2.0, l1_ratio=0.1),
         find_rotation=True,
     )
 
