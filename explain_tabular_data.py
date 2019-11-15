@@ -95,7 +95,7 @@ if __name__ == "__main__":
     sigma_HD = 1.0  # larger of Gaussian in HD
     sigma_LD = 1.0  # larger of Gaussian in LD
     seed = 42  # for reproducing
-    debug_level = 0  # verbose in tsne
+    debug_level = 0  # verbose in tsne, 0 to disable
     N_max = 1000  # maximum number of data points for testing only
     force_recompute = True  # use pre-calculated embedding and samples or recompute them
     sampling_method = "sample_around"  # add noise to selected point, works with tabular data

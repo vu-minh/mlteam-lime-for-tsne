@@ -49,6 +49,7 @@ def tsne_sample_embedded_points(
         y_samples: list of `n_samples` embedded points in LD
     """
     assert isinstance(selected_idx, int), "`selected_idx` must be a valid index"
+    N, D = X.shape
 
     # first, run tsne with base `perplexity` to obtain the "base model"
     log_name_pattern = (
@@ -78,6 +79,7 @@ def tsne_sample_embedded_points(
         x_samples = generate_samples_SMOTE(
             selected_idx, X, k_nearbors=n_neighbors_SMOTE, n_samples=n_samples
         )
+        x_samples = np.array(x_samples).reshape(-1, D)
 
         # update hyper-params for quick re-run tsne
         tsne_hyper_params.update(early_stop_hyper_params)
@@ -102,16 +104,15 @@ def tsne_sample_embedded_points(
                     X=X,
                     Y=Y,
                     query_idx=selected_idx,
-                    query_points=x_sample,
+                    query_points=x_sample.reshape(1, D),
                     sigma_LD=sigma_LD,
                     tsne_hyper_params=tsne_hyper_params,
                 )
                 print(f"[DEBUG] Query-blackbox for {i+1}th point in {time() - tick:.3f} s")
                 y_samples.append(y_sample)
+            y_samples = np.array(y_samples).reshape(-1, Y.shape[1])
 
         # save the sampled points for latter use
-        x_samples = np.array(x_samples).reshape(-1, X.shape[1])
-        y_samples = np.array(y_samples).reshape(-1, Y.shape[1])
         joblib.dump((x_samples, y_samples), log_name_samples)
     return Y, x_samples, y_samples
 
@@ -132,6 +133,8 @@ def query_blackbox_tsne(
     y_proposals = sample_around(Y[query_idx], sigma=sigma_LD, n_samples=len(query_points))
 
     # append new samples in HD and LD into X and Y
+    assert X.shape[1] == query_points.shape[1], "query_points.shape and X.shape should match"
+    assert Y.shape[1] == y_proposals.shape[1], "y_proposals.shape and Y.shape should match"
     X_new = np.concatenate([X, query_points], axis=0)
     Y_new = np.concatenate([Y, y_proposals], axis=0)
 
@@ -142,7 +145,7 @@ def query_blackbox_tsne(
 
     # debug to see if the original embedding does not change (or change a little bit)
     # TODO: discuss if it is necessary to make the initial Y does not change
-    if tsne_hyper_params.get("verbose", 0) > 0:
+    if tsne_hyper_params.get("verbose", 0) >= 0:
         diff = Y - Y_with_samples[:N]
         print("[DEBUG] Check if the embedding for N original points does not change")
         print("Norm of diff: ", np.linalg.norm(diff))
