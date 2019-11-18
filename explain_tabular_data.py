@@ -9,7 +9,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from sample_tsne import tsne_sample_embedded_points
-from explainer import explain_samples
+from explainer import explain_samples, explain_samples_with_cv
 from sklearn.datasets import load_wine, load_iris, load_boston
 from sklearn.preprocessing import StandardScaler, Normalizer
 from sklearn.linear_model import Lasso, ElasticNet, Ridge, LinearRegression
@@ -78,14 +78,14 @@ def run_explainer(linear_model, selected_idx):
     scatter_with_samples(Y, y_samples, selected_idx, texts=labels, out_name=out_name_Y)
 
     # apply the linear model for explaining the sampled points
-    W, score, rotation = explain_samples(
-        x_samples, y_samples, linear_model=linear_model, find_rotation=True,
+    W, score, rotation = explain_samples_with_cv(
+        x_samples, y_samples, linear_model=linear_model
     )
 
     # visualize the weights of the linear model
     # (show contribution of the most important features)
     out_name_W = f"{out_name_prefix}_explanation.png"
-    title = f"Best score $R^2$ = {score:.3f}, best rotation = {rotation} deg"
+    title = f"Best score $R^2$ = {score:.3f}, best rotation = {rotation:.0f} deg"
     plot_weights(W, feature_names, title=title, out_name=out_name_W, left_margin=0.4)
 
 
@@ -97,10 +97,10 @@ if __name__ == "__main__":
     seed = 42  # for reproducing
     debug_level = 0  # verbose in tsne, 0 to disable
     N_max = 1000  # maximum number of data points for testing only
-    force_recompute = True  # use pre-calculated embedding and samples or recompute them
+    force_recompute = False  # use pre-calculated embedding and samples or recompute them
     sampling_method = "sample_around"  # add noise to selected point, works with tabular data
 
-    dataset_name = "wine"
+    dataset_name = "country"
     log_dir = f"./var/{dataset_name}"
     plot_dir = f"./plots/{dataset_name}"
     for a_dir in [plot_dir, log_dir]:
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     print("[DEBUG] selected point: ", selected_idx, labels[selected_idx])
 
     # run the full workflow with a chosen linear model
-    linear_model = Lasso(fit_intercept=False, alpha=0.25)
+    # linear_model = Lasso(fit_intercept=False, alpha=0.25)
     # Lasso(fit_intercept=False, alpha=0.015)
-    # ElasticNet(alpha=2.0, l1_ratio=0.1),
+    linear_model = ElasticNet()
     run_explainer(linear_model, selected_idx=int(selected_idx))
