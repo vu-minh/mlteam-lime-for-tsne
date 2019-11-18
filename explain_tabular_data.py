@@ -4,9 +4,12 @@
 
 import os
 import joblib
+import string
+from pprint import pprint
 
 import numpy as np
 from matplotlib import pyplot as plt
+import pandas as pd
 
 from sample_tsne import tsne_sample_embedded_points
 from explainer import explain_samples, explain_samples_with_cv
@@ -17,12 +20,19 @@ from sklearn.linear_model import Lasso, ElasticNet, Ridge, LinearRegression
 from utils import scatter_with_samples, plot_weights
 
 
+def clean_feature_names(feature_names):
+    def _clean_words(words):
+        return "".join(w for w in words if w.isalnum() or w in string.whitespace)
+
+    return [_clean_words(feature_name) for feature_name in feature_names]
+
+
 def load_country():
     data = joblib.load("./dataset/country.dat")
     return {
         "data": data["X"],
         "target": data["country_names"],
-        "feature_names": data["indicator_descriptions"],
+        "feature_names": clean_feature_names(data["indicator_descriptions"]),
     }
 
 
@@ -50,6 +60,91 @@ def load_tabular_dataset(dataset_name="country", standardize=True):
         X = StandardScaler().fit_transform(X)
 
     return X, label_names, feature_names
+
+
+def apply_BIR(x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_dir):
+    """
+    """
+    # From `y_samples` create the csv file for BIR (as `embedding`)
+    y_samples_filename = f"{data_dir}/{dataset_name}_y_samples.csv"
+    np.savetxt(y_samples_filename, y_samples.astype(np.float32), delimiter=",", fmt="%.6f")
+
+    # Write `x_samples` to csv file with header (as `dataset`)
+    x_samples_filename = f"{data_dir}/{dataset_name}_x_samples.csv"
+    np.savetxt(
+        x_samples_filename,
+        x_samples.astype(np.float32),
+        delimiter=",",
+        fmt="%.6f",
+        header=",".join(feature_names),
+        comments="",  # remove the first char (#) in header
+    )
+
+    # Prepare the output .Rdata for BIR script and output_directory
+    output_directory = f"{data_dir}/{dataset_name}_result"
+    output_Rdata = f"{output_directory}.Rdata"
+
+    # Run `Rscript BIR.R embedding.csv dataset.csv output.Rdata`
+    BIR_script = (
+        f"cd {BIR_dir};"
+        f"Rscript BIR.R "
+        f"../{y_samples_filename} ../{x_samples_filename} ../{output_Rdata}; "
+        f"cd ../"
+    )
+    print(BIR_script)
+    os.system(BIR_script)
+
+    # Run `Rscript from_RData_to_csv.R output.Rdata output_directory`
+    convert_script = f"Rscript from_RData_to_csv.R {output_Rdata} {output_directory}/"
+    print(convert_script)
+    os.system(convert_script)
+
+    # Read weights, feature_names, score from `output_directory` (BIR_R2.csv, BIR_W.csv)
+    score_data = pd.read_csv(f"{output_directory}/BIR_R2.csv")
+    scores = score_data["x"].values
+
+    weight_data = pd.read_csv(f"{output_directory}/BIR_W.csv")
+    weights = weight_data[["V1", "V2"]].values.T
+
+    return weights, scores
+
+
+def run_explainer_with_BIR(selected_idx):
+    """Run the full workflow to samples, do embedding and apply the `linear_model`
+    """
+
+    # apply the workflow for generating the samples in HD and embed them in LD
+    Y, x_samples, y_samples = tsne_sample_embedded_points(
+        X,
+        selected_idx=selected_idx,
+        n_samples=n_samples,
+        sigma_HD=sigma_HD,
+        sigma_LD=sigma_LD,
+        # sampling_method=sampling_method,
+        tsne_hyper_params=tsne_hyper_params,
+        early_stop_hyper_params=early_stop_hyper_params,
+        log_dir=log_dir,
+        force_recompute=force_recompute,
+        batch_mode=False,
+    )
+
+    # viz the original embedding with the new sampled points
+    out_name_prefix = f"{plot_dir}/id{selected_idx}-{sigma_HD}-{sigma_LD}-{n_samples}"
+    out_name_Y = f"{out_name_prefix}_scatter.png"
+    # TODO show the country with name or numeric `labels`
+    scatter_with_samples(Y, y_samples, selected_idx, texts=labels, out_name=out_name_Y)
+
+    # apply BIR to obtain W and scores for 2 axes
+    W, scores = apply_BIR(x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_dir)
+
+    # visualize the weights of the linear model
+    # (show contribution of the most important features)
+    rotation = "unknown"
+    out_name_W = f"{out_name_prefix}_explanation.png"
+    title = (
+        f"Best score $R^2$ for first axis {scores[0]:.3f} and for second axis {scores[1]:.3f}"
+    )
+    plot_weights(W, feature_names, title=title, out_name=out_name_W, left_margin=0.4)
 
 
 def run_explainer(linear_model, selected_idx):
@@ -101,6 +196,8 @@ if __name__ == "__main__":
     sampling_method = "sample_around"  # add noise to selected point, works with tabular data
 
     dataset_name = "country"
+    data_dir = "dataset"
+    BIR_dir = "./BIR"
     log_dir = f"./var/{dataset_name}"
     plot_dir = f"./plots/{dataset_name}"
     for a_dir in [plot_dir, log_dir]:
@@ -126,13 +223,15 @@ if __name__ == "__main__":
 
     # load the chosen dataset
     X, labels, feature_names = load_tabular_dataset(dataset_name, standardize=True)
+    pprint(feature_names)
 
     # select a (random) point to explain
     selected_idx = np.random.randint(X.shape[0])
     print("[DEBUG] selected point: ", selected_idx, labels[selected_idx])
 
     # run the full workflow with a chosen linear model
-    # linear_model = Lasso(fit_intercept=False, alpha=0.25)
-    # Lasso(fit_intercept=False, alpha=0.015)
-    linear_model = ElasticNet()
-    run_explainer(linear_model, selected_idx=int(selected_idx))
+    # linear_model = ElasticNet()
+    # run_explainer(linear_model, selected_idx=int(selected_idx))
+
+    # run explainer with BIR
+    run_explainer_with_BIR(selected_idx)
