@@ -82,6 +82,8 @@ def apply_BIR(x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_d
 
     # Prepare the output .Rdata for BIR script and output_directory
     output_directory = f"{data_dir}/{dataset_name}_result"
+    if not os.path.exists(output_directory):
+        os.mkdir(output_directory)
     output_Rdata = f"{output_directory}.Rdata"
 
     # Run `Rscript BIR.R embedding.csv dataset.csv output.Rdata`
@@ -109,45 +111,7 @@ def apply_BIR(x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_d
     return weights, scores
 
 
-def run_explainer_with_BIR(selected_idx):
-    """Run the full workflow to samples, do embedding and apply the `linear_model`
-    """
-
-    # apply the workflow for generating the samples in HD and embed them in LD
-    Y, x_samples, y_samples = tsne_sample_embedded_points(
-        X,
-        selected_idx=selected_idx,
-        n_samples=n_samples,
-        sigma_HD=sigma_HD,
-        sigma_LD=sigma_LD,
-        # sampling_method=sampling_method,
-        tsne_hyper_params=tsne_hyper_params,
-        early_stop_hyper_params=early_stop_hyper_params,
-        log_dir=log_dir,
-        force_recompute=force_recompute,
-        batch_mode=False,
-    )
-
-    # viz the original embedding with the new sampled points
-    out_name_prefix = f"{plot_dir}/id{selected_idx}-{sigma_HD}-{sigma_LD}-{n_samples}"
-    out_name_Y = f"{out_name_prefix}_scatter.png"
-    # TODO show the country with name or numeric `labels`
-    scatter_with_samples(Y, y_samples, selected_idx, texts=labels, out_name=out_name_Y)
-
-    # apply BIR to obtain W and scores for 2 axes
-    W, scores = apply_BIR(x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_dir)
-
-    # visualize the weights of the linear model
-    # (show contribution of the most important features)
-    rotation = "unknown"
-    out_name_W = f"{out_name_prefix}_explanation.png"
-    title = (
-        f"Best score $R^2$ for first axis {scores[0]:.3f} and for second axis {scores[1]:.3f}"
-    )
-    plot_weights(W, feature_names, title=title, out_name=out_name_W, left_margin=0.4)
-
-
-def run_explainer(linear_model, selected_idx):
+def run_explainer(selected_idx, linear_model=None):
     """Run the full workflow to samples, do embedding and apply the `linear_model`
     """
 
@@ -172,15 +136,22 @@ def run_explainer(linear_model, selected_idx):
     # TODO show the country with name or numeric `labels`
     scatter_with_samples(Y, y_samples, selected_idx, texts=labels, out_name=out_name_Y)
 
-    # apply the linear model for explaining the sampled points
-    W, score, rotation = explain_samples_with_cv(
-        x_samples, y_samples, linear_model=linear_model
-    )
+    if linear_model is not None:
+        # apply the linear model for explaining the sampled points
+        W, score, rotation = explain_samples_with_cv(
+            x_samples, y_samples, linear_model=linear_model
+        )
+        title = f"Best score $R^2$ = {score:.3f}, best rotation = {rotation:.0f} deg"
+    else:
+        # apply BIR to obtain W and scores for 2 axes
+        W, scores = apply_BIR(
+            x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_dir
+        )
+        title = f"Best score $R^2$ for first axis {scores[0]:.3f} and for second axis {scores[1]:.3f}"
 
     # visualize the weights of the linear model
     # (show contribution of the most important features)
     out_name_W = f"{out_name_prefix}_explanation.png"
-    title = f"Best score $R^2$ = {score:.3f}, best rotation = {rotation:.0f} deg"
     plot_weights(W, feature_names, title=title, out_name=out_name_W, left_margin=0.4)
 
 
@@ -195,7 +166,7 @@ if __name__ == "__main__":
     force_recompute = False  # use pre-calculated embedding and samples or recompute them
     sampling_method = "sample_around"  # add noise to selected point, works with tabular data
 
-    dataset_name = "country"
+    dataset_name = "wine"
     data_dir = "dataset"
     BIR_dir = "./BIR"
     log_dir = f"./var/{dataset_name}"
@@ -229,9 +200,6 @@ if __name__ == "__main__":
     selected_idx = np.random.randint(X.shape[0])
     print("[DEBUG] selected point: ", selected_idx, labels[selected_idx])
 
-    # run the full workflow with a chosen linear model
+    # run the full workflow with a chosen `linear_model` or with BIR if the `linear_model` is None
     # linear_model = ElasticNet()
-    # run_explainer(linear_model, selected_idx=int(selected_idx))
-
-    # run explainer with BIR
-    run_explainer_with_BIR(selected_idx)
+    run_explainer(selected_idx=int(selected_idx), linear_model=None)
