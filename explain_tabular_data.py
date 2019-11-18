@@ -11,12 +11,14 @@ import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pd
 
-from sample_tsne import tsne_sample_embedded_points
-from explainer import explain_samples, explain_samples_with_cv
+from scipy.spatial.distance import cdist
 from sklearn.datasets import load_wine, load_iris, load_boston
 from sklearn.preprocessing import StandardScaler, Normalizer
 from sklearn.linear_model import Lasso, ElasticNet, Ridge, LinearRegression
+from sklearn.linear_model.base import _rescale_data
 
+from sample_tsne import tsne_sample_embedded_points
+from explainer import explain_samples, explain_samples_with_cv
 from utils import scatter_with_samples, plot_weights
 
 
@@ -60,6 +62,21 @@ def load_tabular_dataset(dataset_name="country", standardize=True):
         X = StandardScaler().fit_transform(X)
 
     return X, label_names, feature_names
+
+
+def calculate_weights(y, y_samples):
+    """Use the formula q_ij of tsne for weighting the points in `y_samples`
+    weight_i = ( 1 + || y - y_i || ^2 ) ^ -1
+    """
+    n_samples, D = y_samples.shape
+    dist = cdist(y.reshape(-1, D), y_samples, "sqeuclidean")  # [1x n_samples]
+    assert dist.shape[1] == n_samples
+
+    dist = 1 + dist  # np.sum(dist ** 2, axis=1)
+    weights = dist ** -1
+    assert weights.shape[1] == n_samples
+
+    return weights
 
 
 def apply_BIR(x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_dir):
@@ -135,6 +152,12 @@ def run_explainer(selected_idx, linear_model=None):
     out_name_Y = f"{out_name_prefix}_scatter.png"
     # TODO show the country with name or numeric `labels`
     scatter_with_samples(Y, y_samples, selected_idx, texts=labels, out_name=out_name_Y)
+
+    # calculate weights in LD from the selected point and the samples around it
+    sample_weights = calculate_weights(Y[selected_idx], y_samples)
+
+    # rescale data according to the `sample_weights`
+    x_samples, y_samples = _rescale_data(x_samples, y_samples, sample_weights)
 
     if linear_model is not None:
         # apply the linear model for explaining the sampled points
