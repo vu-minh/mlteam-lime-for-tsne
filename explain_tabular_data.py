@@ -38,6 +38,12 @@ def load_country():
     }
 
 
+def load_automobile():
+    # TODO: test with this dataset too
+    # Ref: https://www.kaggle.com/toramky/automobile-dataset
+    return
+
+
 def load_tabular_dataset(dataset_name="country", standardize=True):
     """Load the tabular dataset with the given `dataset_name`
     Returns:
@@ -68,15 +74,17 @@ def calculate_weights(y, y_samples):
     """Use the formula q_ij of tsne for weighting the points in `y_samples`
     weight_i = ( 1 + || y - y_i || ^2 ) ^ -1
     """
-    n_samples, D = y_samples.shape
-    dist = cdist(y.reshape(-1, D), y_samples, "sqeuclidean")  # [1x n_samples]
-    assert dist.shape[1] == n_samples
+    dist = 1 + cdist(y_samples, y.reshape(1, -1), "sqeuclidean")  # [n_samples x 1]
+    assert dist.shape[0] == y_samples.shape[0]
+    return dist ** -1
 
-    dist = 1 + dist  # np.sum(dist ** 2, axis=1)
-    weights = dist ** -1
-    assert weights.shape[1] == n_samples
 
-    return weights
+def filter_by_radius(y_selected, x_samples, y_samples, reject_radius):
+    """Filter the samples inside the cycle determined by`reject_radius`
+    """
+    distances = np.linalg.norm(y_selected - y_samples, axis=1)
+    keep_indices = distances <= reject_radius
+    return x_samples[keep_indices], y_samples[keep_indices]
 
 
 def apply_BIR(x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_dir):
@@ -128,8 +136,17 @@ def apply_BIR(x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_d
     return weights, scores
 
 
-def run_explainer(selected_idx, linear_model=None):
-    """Run the full workflow to samples, do embedding and apply the `linear_model`
+def run_explainer(selected_idx, linear_model=None, use_weights=False, reject_radius=0):
+    """Run the full workflow to samples, do embedding and apply the `linear_model` or BIR
+    Args:
+        selected_idx: index of a selected point
+        linear_model: a sklearn.linear_model for explaining data
+            if `linear_model` is None, use BIR
+        use_weights: defaults to False: weights the samples by their distance
+            to the selected point
+        reject_radius: defaults to 0: reject the samples in 2D
+            which are outside of the cycle with the given radius.
+            If `reject_radius` is zero, do not reject any sample at all.
     """
 
     # apply the workflow for generating the samples in HD and embed them in LD
@@ -147,23 +164,21 @@ def run_explainer(selected_idx, linear_model=None):
         batch_mode=False,
     )
 
-    # viz the original embedding with the new sampled points
-    out_name_prefix = f"{plot_dir}/id{selected_idx}-{sigma_HD}-{sigma_LD}-{n_samples}"
-    out_name_Y = f"{out_name_prefix}_scatter.png"
-    # TODO show the country with name or numeric `labels`
-    scatter_with_samples(Y, y_samples, selected_idx, texts=labels, out_name=out_name_Y)
+    if reject_radius > 0:
+        x_samples, y_samples = filter_by_radius(
+            Y[selected_idx], x_samples, y_samples, reject_radius
+        )
 
-    # calculate weights in LD from the selected point and the samples around it
-    sample_weights = calculate_weights(Y[selected_idx], y_samples)
-
-    # rescale data according to the `sample_weights`
-    x_samples, y_samples = _rescale_data(x_samples, y_samples, sample_weights)
+    if use_weights:
+        # calculate weights in LD from the selected point and the samples around it
+        sample_weights = calculate_weights(Y[selected_idx], y_samples)
+        # rescale data according to the `sample_weights`
+        # x_samples, y_samples = _rescale_data(x_samples, y_samples, sample_weights)
+        x_samples = np.multiply(sample_weights, x_samples)
 
     if linear_model is not None:
         # apply the linear model for explaining the sampled points
-        W, score, rotation = explain_samples_with_cv(
-            x_samples, y_samples, linear_model=linear_model
-        )
+        W, score, rotation = explain_samples(x_samples, y_samples, linear_model=linear_model)
         title = f"Best score $R^2$ = {score:.3f}, best rotation = {rotation:.0f} deg"
     else:
         # apply BIR to obtain W and scores for 2 axes
@@ -171,6 +186,16 @@ def run_explainer(selected_idx, linear_model=None):
             x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_dir
         )
         title = f"Best score $R^2$ for first axis {scores[0]:.3f} and for second axis {scores[1]:.3f}"
+
+    # viz the original embedding with the new sampled points
+    out_name_prefix = (
+        f"{plot_dir}/id{selected_idx}-n{n_samples}"
+        f"-{'BIR' if linear_model is None else 'LM'}"
+        f"-r{reject_radius}"
+        f"-w{1 if use_weights else 0}"
+    )
+    out_name_Y = f"{out_name_prefix}_scatter.png"
+    scatter_with_samples(Y, y_samples, selected_idx, texts=labels, out_name=out_name_Y)
 
     # visualize the weights of the linear model
     # (show contribution of the most important features)
@@ -183,12 +208,13 @@ if __name__ == "__main__":
     n_samples = 100  # number of points to sample
     sigma_HD = 1.0  # larger of Gaussian in HD
     sigma_LD = 1.0  # larger of Gaussian in LD
-    seed = 42  # for reproducing
+    seed = 1024  # for reproducing
     debug_level = 0  # verbose in tsne, 0 to disable
     N_max = 1000  # maximum number of data points for testing only
     force_recompute = False  # use pre-calculated embedding and samples or recompute them
     sampling_method = "sample_around"  # add noise to selected point, works with tabular data
 
+    # TODO test with Automobile dataset
     dataset_name = "wine"
     data_dir = "dataset"
     BIR_dir = "./BIR"
@@ -203,7 +229,7 @@ if __name__ == "__main__":
 
     # basic params to run tsne the first time
     tsne_hyper_params = dict(
-        method="exact", perplexity=10, n_iter=1000, random_state=42, verbose=debug_level
+        method="exact", perplexity=20, n_iter=1000, random_state=42, verbose=debug_level
     )
 
     # to re-run tsne quickly, take the initial embedding as `init` and use the following params
@@ -224,5 +250,12 @@ if __name__ == "__main__":
     print("[DEBUG] selected point: ", selected_idx, labels[selected_idx])
 
     # run the full workflow with a chosen `linear_model` or with BIR if the `linear_model` is None
-    # linear_model = ElasticNet()
-    run_explainer(selected_idx=int(selected_idx), linear_model=None)
+    linear_model = None  # ElasticNet()
+    reject_radius = 5
+    use_weights = False
+    run_explainer(
+        selected_idx=int(selected_idx),
+        linear_model=linear_model,
+        use_weights=use_weights,
+        reject_radius=reject_radius,
+    )
