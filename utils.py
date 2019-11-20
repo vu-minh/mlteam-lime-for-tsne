@@ -1,11 +1,92 @@
 # minhvu
 # 13/11/2019
-# util functions for ploting
+# util functions for ploting and loading dataset
 
 import math
+import joblib
+import string
 
 import numpy as np
 from matplotlib import pyplot as plt
+from sklearn.datasets import load_wine, load_iris, load_boston
+from sklearn.preprocessing import StandardScaler, Normalizer
+
+
+def clean_feature_names(feature_names):
+    def _clean_words(words):
+        return "".join(w for w in words if w.isalnum() or w in string.whitespace)
+
+    return [_clean_words(feature_name) for feature_name in feature_names]
+
+
+def load_country():
+    data = joblib.load("./dataset/country.dat")
+    return {
+        "data": data["X"],
+        "target": data["country_names"],
+        "feature_names": clean_feature_names(data["indicator_descriptions"]),
+    }
+
+
+def load_automobile():
+    # Ref: https://www.kaggle.com/toramky/automobile-dataset
+    return joblib.load("./dataset/Automobile.pkl")
+
+
+def load_cars_dataset():
+    # UCI cars dataset: https://archive.ics.uci.edu/ml/datasets/automobile
+    df = pd.read_csv("./dataset/cars1985.csv")
+    print(df.describe())
+
+    instance_names = df["Vehicle Name"].tolist()
+    print(instance_names)
+
+    column_names = list(df.columns)
+    print(column_names)
+
+    # The "Engine Size (l)" column is string. Convert it to float
+    df["Engine Size (l)"] = df["Engine Size (l)"].str.replace(",", "").astype(float)
+
+    # Fill NAN by the average value of the column
+    df.fillna(df.mean(), inplace=True)
+
+    # Get all columns except the first one and convert to numpy array
+    data = df.loc[:, df.columns != "Vehicle Name"].to_numpy()
+    print(data.shape)
+
+    return {
+        "data": data,
+        "target": instance_names,
+        "feature_names": column_names[1:],  # remove first column of vehicle name
+    }
+
+
+def load_tabular_dataset(dataset_name="country", standardize=True):
+    """Load the tabular dataset with the given `dataset_name`
+    Returns:
+        X: [N x D] data itself
+        labels: [N]
+        feature_names: [D]
+    """
+    load_func = {
+        "country": load_country,
+        "cars1985": load_cars_dataset,
+        "automobile": load_automobile,
+        "wine": load_wine,
+        "iris": load_iris,
+        "boston": load_boston,
+    }[dataset_name]
+
+    data = load_func()
+    X, label_names, feature_names = (
+        data["data"],
+        data["target"],
+        data["feature_names"],
+    )
+    if standardize:
+        X = StandardScaler().fit_transform(X)
+
+    return X, label_names, feature_names
 
 
 def scatter_with_samples(
