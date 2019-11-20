@@ -24,8 +24,6 @@ def tsne_sample_embedded_points(
     selected_idx,
     n_samples=100,
     n_neighbors_SMOTE=10,
-    sigma_HD=0.1,
-    sigma_LD=0.1,
     tsne_hyper_params={},
     early_stop_hyper_params={},
     sampling_method="sample_around",
@@ -55,7 +53,6 @@ def tsne_sample_embedded_points(
     log_name_pattern = (
         f"-id{selected_idx}"
         f"-perp{tsne_hyper_params['perplexity']}"
-        f"-sigmaHD{sigma_HD}-sigmaLD{sigma_LD}"
         f"-seed{tsne_hyper_params['random_state']}.Z"
     )
     log_name_Y = f"{log_dir}/Y{log_name_pattern}"
@@ -91,7 +88,6 @@ def tsne_sample_embedded_points(
                 Y=Y,
                 query_idx=selected_idx,
                 query_points=x_samples,
-                sigma_LD=sigma_LD,
                 tsne_hyper_params=tsne_hyper_params,
             )
             print(f"[DEBUG] Query-blackbox for {n_samples} points in {time() - tick:.3f} s")
@@ -105,7 +101,6 @@ def tsne_sample_embedded_points(
                     Y=Y,
                     query_idx=selected_idx,
                     query_points=x_sample.reshape(1, D),
-                    sigma_LD=sigma_LD,
                     tsne_hyper_params=tsne_hyper_params,
                 )
                 print(f"[DEBUG] Query-blackbox for {i+1}th point in {time() - tick:.3f} s")
@@ -118,7 +113,7 @@ def tsne_sample_embedded_points(
 
 
 def query_blackbox_tsne(
-    X, Y, query_idx=None, query_points=None, sigma_LD=0.5, tsne_hyper_params={}
+    X, Y, query_idx=None, query_points=None, sigma_LD=1.0, tsne_hyper_params={}
 ):
     """Query-blackbox-like function for sample tsne embedding.
     Given the original `tsne` model (represented by (X, Y) pair),
