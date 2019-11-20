@@ -87,7 +87,7 @@ def filter_by_radius(y_selected, x_samples, y_samples, reject_radius):
     return x_samples[keep_indices], y_samples[keep_indices]
 
 
-def apply_BIR(x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_dir):
+def apply_BIR(x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_dir, lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=10):
     """
     """
     # From `y_samples` create the csv file for BIR (as `embedding`)
@@ -115,7 +115,7 @@ def apply_BIR(x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_d
     BIR_script = (
         f"cd {BIR_dir};"
         f"Rscript BIR.R "
-        f"../{y_samples_filename} ../{x_samples_filename} ../{output_Rdata}; "
+        f"../{y_samples_filename} ../{x_samples_filename} ../{output_Rdata} {lower_bound_lambda} {upper_bound_lambda} {nb_lambda}; "
         f"cd ../"
     )
     print(BIR_script)
@@ -183,7 +183,7 @@ def run_explainer(selected_idx, linear_model=None, use_weights=False, reject_rad
     else:
         # apply BIR to obtain W and scores for 2 axes
         W, scores = apply_BIR(
-            x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_dir
+            x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_dir, lower_bound_lambda=0.0001, upper_bound_lambda=2
         )
         title = f"Best score $R^2$ for first axis {scores[0]:.3f} and for second axis {scores[1]:.3f}"
 
@@ -208,14 +208,14 @@ if __name__ == "__main__":
     n_samples = 100  # number of points to sample
     sigma_HD = 1.0  # larger of Gaussian in HD
     sigma_LD = 1.0  # larger of Gaussian in LD
-    seed = 1024  # for reproducing
+    seed = 2048  # for reproducing
     debug_level = 0  # verbose in tsne, 0 to disable
     N_max = 1000  # maximum number of data points for testing only
     force_recompute = False  # use pre-calculated embedding and samples or recompute them
     sampling_method = "sample_around"  # add noise to selected point, works with tabular data
 
     # TODO test with Automobile dataset
-    dataset_name = "wine"
+    dataset_name = "country"
     data_dir = "dataset"
     BIR_dir = "./BIR"
     log_dir = f"./var/{dataset_name}"
@@ -246,7 +246,7 @@ if __name__ == "__main__":
     pprint(feature_names)
 
     # select a (random) point to explain
-    selected_idx = np.random.randint(X.shape[0])
+    selected_idx = 22 #np.random.randint(X.shape[0])
     print("[DEBUG] selected point: ", selected_idx, labels[selected_idx])
 
     # run the full workflow with a chosen `linear_model` or with BIR if the `linear_model` is None
