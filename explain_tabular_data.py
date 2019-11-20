@@ -3,71 +3,18 @@
 # demo explaining tabular data
 
 import os
-import joblib
-import string
-from pprint import pprint
 
 import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pd
 
 from scipy.spatial.distance import cdist
-from sklearn.datasets import load_wine, load_iris, load_boston
-from sklearn.preprocessing import StandardScaler, Normalizer
 from sklearn.linear_model import Lasso, ElasticNet, Ridge, LinearRegression
-from sklearn.linear_model.base import _rescale_data
 
 from sample_tsne import tsne_sample_embedded_points
 from explainer import explain_samples, explain_samples_with_cv
 from utils import scatter_with_samples, plot_weights
-
-
-def clean_feature_names(feature_names):
-    def _clean_words(words):
-        return "".join(w for w in words if w.isalnum() or w in string.whitespace)
-
-    return [_clean_words(feature_name) for feature_name in feature_names]
-
-
-def load_country():
-    data = joblib.load("./dataset/country.dat")
-    return {
-        "data": data["X"],
-        "target": data["country_names"],
-        "feature_names": clean_feature_names(data["indicator_descriptions"]),
-    }
-
-
-def load_automobile():
-    # TODO: test with this dataset too
-    # Ref: https://www.kaggle.com/toramky/automobile-dataset
-    return
-
-
-def load_tabular_dataset(dataset_name="country", standardize=True):
-    """Load the tabular dataset with the given `dataset_name`
-    Returns:
-        X: [N x D] data itself
-        labels: [N]
-        feature_names: [D]
-    """
-    load_func = {
-        "country": load_country,
-        "wine": load_wine,
-        "iris": load_iris,
-        "boston": load_boston,
-    }[dataset_name]
-
-    data = load_func()
-    X, label_names, feature_names = (
-        data["data"],
-        data["target"],
-        data["feature_names"],
-    )
-    if standardize:
-        X = StandardScaler().fit_transform(X)
-
-    return X, label_names, feature_names
+from utils import load_tabular_dataset
 
 
 def calculate_weights(y, y_samples):
@@ -87,7 +34,17 @@ def filter_by_radius(y_selected, x_samples, y_samples, reject_radius):
     return x_samples[keep_indices], y_samples[keep_indices]
 
 
-def apply_BIR(x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_dir, lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=10):
+def apply_BIR(
+    x_samples,
+    y_samples,
+    dataset_name,
+    feature_names,
+    data_dir,
+    BIR_dir,
+    lower_bound_lambda=0.0001,
+    upper_bound_lambda=3.5,
+    nb_lambda=10,
+):
     """
     """
     # From `y_samples` create the csv file for BIR (as `embedding`)
@@ -112,10 +69,11 @@ def apply_BIR(x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_d
     output_Rdata = f"{output_directory}.Rdata"
 
     # Run `Rscript BIR.R embedding.csv dataset.csv output.Rdata`
+    lambda_params = f"{lower_bound_lambda} {upper_bound_lambda} {nb_lambda}"
     BIR_script = (
         f"cd {BIR_dir};"
         f"Rscript BIR.R "
-        f"../{y_samples_filename} ../{x_samples_filename} ../{output_Rdata} {lower_bound_lambda} {upper_bound_lambda} {nb_lambda}; "
+        f"../{y_samples_filename} ../{x_samples_filename} ../{output_Rdata} {lambda_params}; "
         f"cd ../"
     )
     print(BIR_script)
@@ -136,7 +94,9 @@ def apply_BIR(x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_d
     return weights, scores
 
 
-def run_explainer(selected_idx, linear_model=None, use_weights=False, reject_radius=0):
+def run_explainer(
+    selected_idx, linear_model=None, use_weights=False, reject_radius=0, lambda_params={}
+):
     """Run the full workflow to samples, do embedding and apply the `linear_model` or BIR
     Args:
         selected_idx: index of a selected point
@@ -154,9 +114,6 @@ def run_explainer(selected_idx, linear_model=None, use_weights=False, reject_rad
         X,
         selected_idx=selected_idx,
         n_samples=n_samples,
-        sigma_HD=sigma_HD,
-        sigma_LD=sigma_LD,
-        sampling_method=sampling_method,
         tsne_hyper_params=tsne_hyper_params,
         early_stop_hyper_params=early_stop_hyper_params,
         log_dir=log_dir,
@@ -173,7 +130,9 @@ def run_explainer(selected_idx, linear_model=None, use_weights=False, reject_rad
         # calculate weights in LD from the selected point and the samples around it
         sample_weights = calculate_weights(Y[selected_idx], y_samples)
         # rescale data according to the `sample_weights`
+        # from sklearn.linear_model.base import _rescale_data
         # x_samples, y_samples = _rescale_data(x_samples, y_samples, sample_weights)
+
         x_samples = np.multiply(sample_weights, x_samples)
 
     if linear_model is not None:
@@ -181,11 +140,18 @@ def run_explainer(selected_idx, linear_model=None, use_weights=False, reject_rad
         W, score, rotation = explain_samples(x_samples, y_samples, linear_model=linear_model)
         title = f"Best score $R^2$ = {score:.3f}, best rotation = {rotation:.0f} deg"
     else:
+        pass
         # apply BIR to obtain W and scores for 2 axes
         W, scores = apply_BIR(
-            x_samples, y_samples, dataset_name, feature_names, data_dir, BIR_dir, lower_bound_lambda=0.0001, upper_bound_lambda=2
+            x_samples,
+            y_samples,
+            dataset_name,
+            feature_names,
+            data_dir,
+            BIR_dir,
+            **lambda_params,
         )
-        title = f"Best score $R^2$ for first axis {scores[0]:.3f} and for second axis {scores[1]:.3f}"
+        title = f"Best $R^2$ for 1st axis {scores[0]:.3f} and for 2nd axis {scores[1]:.3f}"
 
     # viz the original embedding with the new sampled points
     out_name_prefix = (
@@ -204,17 +170,6 @@ def run_explainer(selected_idx, linear_model=None, use_weights=False, reject_rad
 
 
 if __name__ == "__main__":
-    # define the variables for the dataset name, number of samples, ...
-    n_samples = 100  # number of points to sample
-    sigma_HD = 1.0  # larger of Gaussian in HD
-    sigma_LD = 1.0  # larger of Gaussian in LD
-    seed = 2048  # for reproducing
-    debug_level = 0  # verbose in tsne, 0 to disable
-    N_max = 1000  # maximum number of data points for testing only
-    force_recompute = False  # use pre-calculated embedding and samples or recompute them
-    sampling_method = "sample_around"  # add noise to selected point, works with tabular data
-
-    # TODO test with Automobile dataset
     dataset_name = "country"
     data_dir = "dataset"
     BIR_dir = "./BIR"
@@ -224,38 +179,63 @@ if __name__ == "__main__":
         if not os.path.exists(a_dir):
             os.mkdir(a_dir)
 
-    # set numpy random seed for reproducing
-    np.random.seed(seed)
+    # define the variables for the dataset name, number of samples, ...
+    # these global variables can be overrided by the new values loaded from the config
+    n_samples = 100  # number of points to sample
+    seed = 42  # for reproducing
+    debug_level = 0  # verbose in tsne, 0 to disable
+    force_recompute = False  # use pre-calculated embedding and samples or recompute them
+
+    # load config for tsne hyper-params and particular config for the selected points
+    from config_selected_points import config_selected_points
+
+    config = config_selected_points.get(dataset_name, {})
+    # override some global config
+    if config:
+        n_samples = config.get("n_samples", 100)
+        seed = config.get("seed", 42)
 
     # basic params to run tsne the first time
-    tsne_hyper_params = dict(
-        method="exact", perplexity=20, n_iter=1000, random_state=42, verbose=debug_level
+    tsne_hyper_params = config.get(
+        "tsne_hyper_params",
+        dict(method="exact", perplexity=10, n_iter=1000, random_state=42, verbose=debug_level),
     )
 
     # to re-run tsne quickly, take the initial embedding as `init` and use the following params
-    early_stop_hyper_params = dict(
-        early_exaggeration=1,  # disable exaggeration
-        n_iter_without_progress=100,
-        min_grad_norm=1e-7,
-        n_iter=500,  # increase it to test stability
-        verbose=debug_level,
+    early_stop_hyper_params = config.get(
+        "early_stop_hyper_params",
+        dict(
+            early_exaggeration=1,  # disable exaggeration
+            n_iter_without_progress=100,
+            min_grad_norm=1e-7,
+            n_iter=500,  # increase it to test stability
+            verbose=debug_level,
+        ),
     )
+
+    # set numpy random seed for reproducing
+    np.random.seed(seed)
 
     # load the chosen dataset
     X, labels, feature_names = load_tabular_dataset(dataset_name, standardize=True)
-    pprint(feature_names)
 
-    # select a (random) point to explain
-    selected_idx = 22 #np.random.randint(X.shape[0])
-    print("[DEBUG] selected point: ", selected_idx, labels[selected_idx])
+    config_selected_points = config.get("selected_points", {np.random.randint(X.shape[0]): {}})
+    for selected_idx, config_selected_point in config_selected_points.items():
+        selected_idx = int(selected_idx)
+        print("[DEBUG] selected point: ", selected_idx, labels[selected_idx])
 
-    # run the full workflow with a chosen `linear_model` or with BIR if the `linear_model` is None
-    linear_model = None  # ElasticNet()
-    reject_radius = 5
-    use_weights = False
-    run_explainer(
-        selected_idx=int(selected_idx),
-        linear_model=linear_model,
-        use_weights=use_weights,
-        reject_radius=reject_radius,
-    )
+        # run full workflow with a `linear_model` or with BIR if the `linear_model` is None
+        linear_model = None  # ElasticNet()
+        reject_radius = config_selected_point.get("reject_radius", 5)
+        use_weights = config_selected_point.get("use_weights", False)
+        lambda_params = config_selected_point.get(
+            "lambda_params",
+            dict(lower_bound_lambda=0.01, upper_bound_lambda=1.0, nb_lambda=10),
+        )
+        run_explainer(
+            selected_idx=selected_idx,
+            linear_model=linear_model,
+            use_weights=use_weights,
+            reject_radius=reject_radius,
+            lambda_params=lambda_params,
+        )
