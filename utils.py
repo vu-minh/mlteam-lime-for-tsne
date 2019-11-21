@@ -12,6 +12,12 @@ from sklearn.datasets import load_wine, load_iris, load_boston
 from sklearn.preprocessing import StandardScaler, Normalizer
 
 
+def rotate_matrix(degree):
+    theta = np.radians(degree)
+    c, s = np.cos(theta), np.sin(theta)
+    return np.array(((c, -s), (s, c)))
+
+
 def clean_feature_names(feature_names):
     def _clean_words(words):
         return "".join(w for w in words if w.isalnum() or w in string.whitespace)
@@ -96,6 +102,7 @@ def scatter_with_samples(
     labels=None,
     texts=None,
     text_length=3,
+    rot_deg=0,
     out_name="noname00",
 ):
     """Plot the original embedding `Y` with new sampled points `y_samples`
@@ -105,6 +112,8 @@ def scatter_with_samples(
     """
     N = Y.shape[0]
     fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(12, 6))
+    ax0.set_aspect("equal")
+    ax1.set_aspect("equal")
 
     # plot the original embedding
     ax0.scatter(Y[:, 0], Y[:, 1], c=labels, alpha=0.5, cmap="jet")
@@ -123,6 +132,101 @@ def scatter_with_samples(
     if y_samples is not None:
         ax1.scatter(y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r")
 
+    # plot 2 orthogonal axes
+    plot_perpendicular_lines(ax1, Y[selected_idx], rot_deg)
+
+    fig.savefig(out_name)
+    plt.close(fig)
+
+
+def plot_perpendicular_lines(ax, p0, rot_deg=0, axis_length=15):
+    """plot two perpendicular axes with center `p0`
+        and being rotated `rot_deg` degree
+    """
+    x0, y0 = p0
+    linestyle = "--"
+    text_offset = 0.2 * axis_length
+
+    # note: rotation is counter-clockwise
+    R = rotate_matrix(rot_deg)
+    coor_axes = axis_length * R @ np.eye(2)
+    axes_colors = ["blue", "orange"]
+    for i, ([x, y], color) in enumerate(zip(coor_axes, axes_colors)):
+        ax.arrow(
+            x=x0,
+            y=y0,
+            dx=x,
+            dy=y,
+            head_width=0.075 * axis_length,
+            head_length=0.075 * axis_length,
+            edgecolor=color,
+            linestyle=linestyle,
+        )
+        ax.text(
+            x=x0 + x - text_offset,
+            y=y0 + y - text_offset,
+            s=f"W{i+1}",
+            color=color,
+            ha="center",
+        )
+        ax.plot([x0, x0 - x], [y0, y0 - y], color=color, linestyle=linestyle)
+
+
+def scatter_samples_with_rotated_axes(y, y_samples, rot_deg=0, out_name="noname02", ax=None):
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+    ax.set_aspect("equal")
+
+    x_min, y_min = np.min(y_samples[:, 0]), np.min(y_samples[:, 1])
+    x_max, y_max = np.max(y_samples[:, 0]), np.max(y_samples[:, 1])
+    ax.set_xlim(0.75 * x_min, 1.25 * x_max)
+    ax.set_ylim(0.75 * y_min, 1.25 * y_max)
+
+    ax.scatter(y[0], y[1], marker="s", facecolors="None", edgecolors="b", zorder=99)
+    ax.scatter(y_samples[:, 0], y_samples[:, 1], s=64, marker="+", facecolor="r")
+    plot_perpendicular_lines(ax, y, rot_deg, axis_length=0.75 * (x_max - x_min))
+
+    if ax is None and out_name:
+        plt.tight_layout()
+        fig.savefig(out_name)
+        plt.close(fig)
+
+
+def scatter_embedding_with_samples_and_rotated_axes(
+    Y, y_samples, selected_idx, texts=None, rot_deg=0, out_name="noname03", text_length=0
+):
+    """ show subplots ax0 | ax1, in which
+        ax0 shows the embedding `Y` with the selected point `selected_idx` and the `y_samples`
+        ax1 zooms in the samples and shows the rotated coordinate axes
+        ax0 shows text for each point if texts is given and `text_length` > 0
+    """
+    fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(12, 6))
+    ax0.set_aspect("equal")
+    ax1.set_aspect("equal")
+
+    y0 = Y[selected_idx]
+
+    # plot the embedding
+    ax0.scatter(Y[:, 0], Y[:, 1], c=None, alpha=0.5)
+    ax0.scatter(y0[0], y0[1], zorder=99, marker="s", facecolors="None", edgecolors="b")
+    # plot the samples
+    ax0.scatter(y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r")
+
+    # show text
+    if text_length > 0 and texts is not None:
+        for i, text in enumerate(texts):
+            ax.text(x=Y[i, 0], y=Y[i, 1], s=str(text)[:text_length])
+
+    # show title
+    if texts is not None:
+        title = f"Selected point: {texts[selected_idx]}"
+        ax0.set_title(title)
+
+    # in the other subplot, plot the samples with rotated axes
+    scatter_samples_with_rotated_axes(y0, y_samples, rot_deg, ax=ax1)
+    ax1.set_title(f"Best rotation: {rot_deg:.0f} deg")
+
+    plt.tight_layout()
     fig.savefig(out_name)
     plt.close(fig)
 

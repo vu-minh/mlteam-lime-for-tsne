@@ -15,6 +15,7 @@ from sklearn.linear_model import Lasso, ElasticNet, Ridge, LinearRegression
 from sample_tsne import tsne_sample_embedded_points
 from explainer import explain_samples, explain_samples_with_cv
 from utils import scatter_with_samples, plot_weights
+from utils import scatter_embedding_with_samples_and_rotated_axes
 from utils import load_tabular_dataset
 
 
@@ -187,7 +188,13 @@ def run_explainer(
         f"-w{1 if use_weights else 0}"
     )
     out_name_Y = f"{out_name_prefix}_scatter.png"
-    scatter_with_samples(Y, y_samples, selected_idx, texts=labels, out_name=out_name_Y)
+    out_name_sample = f"{out_name_prefix}_samples.png"
+    scatter_with_samples(
+        Y, y_samples, selected_idx, texts=labels, rot_deg=rotation, out_name=out_name_Y
+    )
+    scatter_embedding_with_samples_and_rotated_axes(
+        Y, y_samples, selected_idx, texts=labels, rot_deg=rotation, out_name=out_name_sample,
+    )
 
     # visualize the weights of the linear model
     # (show contribution of the most important features)
