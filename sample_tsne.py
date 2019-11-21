@@ -6,6 +6,7 @@
 import os
 import math
 import joblib
+from copy import deepcopy
 from time import time
 from functools import partial
 
@@ -79,7 +80,9 @@ def tsne_sample_embedded_points(
         x_samples = np.array(x_samples).reshape(-1, D)
 
         # update hyper-params for quick re-run tsne
-        tsne_hyper_params.update(early_stop_hyper_params)
+        # note: copy the params since the `dict.update` has side effect
+        tsne_hyper_params_for_rerun = deepcopy(tsne_hyper_params)
+        tsne_hyper_params_for_rerun.update(early_stop_hyper_params)
 
         if batch_mode:
             tick = time()
@@ -88,7 +91,7 @@ def tsne_sample_embedded_points(
                 Y=Y,
                 query_idx=selected_idx,
                 query_points=x_samples,
-                tsne_hyper_params=tsne_hyper_params,
+                tsne_hyper_params=tsne_hyper_params_for_rerun,
             )
             print(f"[DEBUG] Query-blackbox for {n_samples} points in {time() - tick:.3f} s")
         else:
@@ -101,7 +104,7 @@ def tsne_sample_embedded_points(
                     Y=Y,
                     query_idx=selected_idx,
                     query_points=x_sample.reshape(1, D),
-                    tsne_hyper_params=tsne_hyper_params,
+                    tsne_hyper_params=tsne_hyper_params_for_rerun,
                 )
                 print(f"[DEBUG] Query-blackbox for {i+1}th point in {time() - tick:.3f} s")
                 y_samples.append(y_sample)

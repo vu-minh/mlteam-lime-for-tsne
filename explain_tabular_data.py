@@ -69,6 +69,7 @@ def apply_BIR(
     output_Rdata = f"{output_directory}.Rdata"
 
     # Run `Rscript BIR.R embedding.csv dataset.csv output.Rdata`
+    # TODO: print rotation and lambda
     lambda_params = f"{lower_bound_lambda} {upper_bound_lambda} {nb_lambda}"
     BIR_script = (
         f"cd {BIR_dir};"
@@ -80,6 +81,7 @@ def apply_BIR(
     os.system(BIR_script)
 
     # Run `Rscript from_RData_to_csv.R output.Rdata output_directory`
+    # TODO: RENAME file
     convert_script = f"Rscript from_RData_to_csv.R {output_Rdata} {output_directory}/"
     print(convert_script)
     os.system(convert_script)
@@ -95,7 +97,13 @@ def apply_BIR(
 
 
 def run_explainer(
-    selected_idx, linear_model=None, use_weights=False, reject_radius=0, lambda_params={}
+    selected_idx,
+    linear_model=None,
+    use_weights=False,
+    reject_radius=0,
+    tsne_hyper_params={},
+    early_stop_hyper_params={},
+    lambda_params={},
 ):
     """Run the full workflow to samples, do embedding and apply the `linear_model` or BIR
     Args:
@@ -184,7 +192,7 @@ if __name__ == "__main__":
     n_samples = 100  # number of points to sample
     seed = 42  # for reproducing
     debug_level = 0  # verbose in tsne, 0 to disable
-    force_recompute = False  # use pre-calculated embedding and samples or recompute them
+    force_recompute = True  # use pre-calculated embedding and samples or recompute them
 
     # load config for tsne hyper-params and particular config for the selected points
     from config_selected_points import config_selected_points
@@ -237,5 +245,7 @@ if __name__ == "__main__":
             linear_model=linear_model,
             use_weights=use_weights,
             reject_radius=reject_radius,
+            tsne_hyper_params=tsne_hyper_params,
+            early_stop_hyper_params=early_stop_hyper_params,
             lambda_params=lambda_params,
         )
