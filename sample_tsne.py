@@ -52,11 +52,11 @@ def tsne_sample_embedded_points(
 
     # first, run tsne with base `perplexity` to obtain the "base model"
     log_name_pattern = (
-        f"-id{selected_idx}"
+        # f"-id{selected_idx}"
         f"-perp{tsne_hyper_params['perplexity']}"
-        f"-seed{tsne_hyper_params['random_state']}.Z"
+        f"-seed{tsne_hyper_params['random_state']}"
     )
-    log_name_Y = f"{log_dir}/Y{log_name_pattern}"
+    log_name_Y = f"{log_dir}/Y{log_name_pattern}.Z"
     if os.path.exists(log_name_Y) and not force_recompute:
         Y = joblib.load(log_name_Y)
         print("[DEBUG] Reuse: ", log_name_Y)
@@ -66,7 +66,8 @@ def tsne_sample_embedded_points(
         joblib.dump(Y, log_name_Y)
         print("[DEBUG] Initial tsne model: ", tsne)
 
-    log_name_samples = f"{log_dir}/{sampling_method}{n_samples}{log_name_pattern}"
+    # log_name_samples = f"{log_dir}/{sampling_method}{n_samples}{log_name_pattern}.Z"
+    log_name_samples = f"{log_dir}/id{selected_idx}-n{n_samples}{log_name_pattern}.Z"
     if os.path.exists(log_name_samples) and not force_recompute:
         x_samples, y_samples = joblib.load(log_name_samples)
         print("[DEBUG] Reuse: ", log_name_samples)
