@@ -3,6 +3,7 @@
 # demo explaining tabular data
 
 import os
+import math
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -35,6 +36,7 @@ def filter_by_radius(y_selected, x_samples, y_samples, reject_radius):
 
 
 def apply_BIR(
+    selected_idx,
     x_samples,
     y_samples,
     dataset_name,
@@ -69,7 +71,6 @@ def apply_BIR(
     output_Rdata = f"{output_directory}.Rdata"
 
     # Run `Rscript BIR.R embedding.csv dataset.csv output.Rdata`
-    # TODO: print rotation and lambda
     lambda_params = f"{lower_bound_lambda} {upper_bound_lambda} {nb_lambda}"
     BIR_script = (
         f"cd {BIR_dir};"
@@ -81,19 +82,32 @@ def apply_BIR(
     os.system(BIR_script)
 
     # Run `Rscript from_RData_to_csv.R output.Rdata output_directory`
-    # TODO: RENAME file
     convert_script = f"Rscript from_RData_to_csv.R {output_Rdata} {output_directory}/"
     print(convert_script)
     os.system(convert_script)
 
-    # Read weights, feature_names, score from `output_directory` (BIR_R2.csv, BIR_W.csv)
+    # Read weights, feature_names, score from `output_directory` (BIR_R2.csv, BIR_W.csv, ...)
     score_data = pd.read_csv(f"{output_directory}/BIR_R2.csv")
     scores = score_data["x"].values
 
     weight_data = pd.read_csv(f"{output_directory}/BIR_W.csv")
     weights = weight_data[["V1", "V2"]].values.T
 
-    return weights, scores
+    rotation_data = pd.read_csv(f"{output_directory}/BIR_R.csv")
+    rotation_mat = rotation_data[["V1", "V2"]].values
+    deg = math.degrees(math.acos(rotation_mat[0, 0]))
+
+    # Rename BIR output files
+    file_id = f"id{selected_idx}-l{lower_bound_lambda}-u{upper_bound_lambda}-n{nb_lambda}"
+    rename_script = (
+        f"mv {output_directory}/BIR_R2.csv {output_directory}/BIR_R2_{file_id}.csv;"
+        f"mv {output_directory}/BIR_W.csv {output_directory}/BIR_W_{file_id}.csv;"
+        f"mv {output_directory}/BIR_R.csv {output_directory}/BIR_R_{file_id}.csv;"
+    )
+    print(rename_script)
+    os.system(rename_script)
+
+    return weights, scores, deg
 
 
 def run_explainer(
@@ -150,7 +164,8 @@ def run_explainer(
     else:
         pass
         # apply BIR to obtain W and scores for 2 axes
-        W, scores = apply_BIR(
+        W, scores, rotation = apply_BIR(
+            selected_idx,
             x_samples,
             y_samples,
             dataset_name,
@@ -159,7 +174,10 @@ def run_explainer(
             BIR_dir,
             **lambda_params,
         )
-        title = f"Best $R^2$ for 1st axis {scores[0]:.3f} and for 2nd axis {scores[1]:.3f}"
+        title = (
+            f"Best $R^2$ for 1st axis {scores[0]:.3f} and for 2nd axis {scores[1]:.3f}\n"
+            f"Rotation {rotation:.3f} deg"
+        )
 
     # viz the original embedding with the new sampled points
     out_name_prefix = (
@@ -192,7 +210,7 @@ if __name__ == "__main__":
     n_samples = 100  # number of points to sample
     seed = 42  # for reproducing
     debug_level = 0  # verbose in tsne, 0 to disable
-    force_recompute = True  # use pre-calculated embedding and samples or recompute them
+    force_recompute = False  # use pre-calculated embedding and samples or recompute them
 
     # load config for tsne hyper-params and particular config for the selected points
     from config_selected_points import config_selected_points
