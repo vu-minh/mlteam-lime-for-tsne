@@ -143,7 +143,7 @@ def query_blackbox_tsne(
 
     # debug to see if the original embedding does not change (or change a little bit)
     # TODO: discuss if it is necessary to make the initial Y does not change
-    if tsne_hyper_params.get("verbose", 0) >= 0:
+    if tsne_hyper_params.get("verbose", 0) > 0:
         diff = Y - Y_with_samples[:N]
         print("[DEBUG] Check if the embedding for N original points does not change")
         print("Norm of diff: ", np.linalg.norm(diff))
