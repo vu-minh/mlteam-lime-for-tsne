@@ -15,4 +15,5 @@ if (length(args) < 2) {
 load(BIR.out.path)
 
 write.csv(res$W, paste0(out.path, "BIR_W.csv"))
+write.csv(res$R, paste0(out.path, "BIR_R.csv"))
 write.csv(res$R_squared, paste0(out.path, "BIR_R2.csv"))
