@@ -38,9 +38,9 @@ def explain_samples(x_samples, y_samples, linear_model):
     linear_model = ElasticNet()
 
     space = [
-        Real(0, 90, name="rotation"),
+        Real(0, 180, name="rotation"),
         Real(0.1, 2.0, name="alpha"),
-        Real(0.1, 1.0, name="l1_ratio"),
+        Real(0.5, 1.0, name="l1_ratio"),
     ]
     (rotation, alpha, l1_ratio), score = optimize_linear_model(
         x_samples, y_samples, linear_model, space, random_state=42
