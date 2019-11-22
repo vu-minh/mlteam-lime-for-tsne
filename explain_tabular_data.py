@@ -198,7 +198,8 @@ def run_explainer(
 
     # visualize the weights of the linear model
     # (show contribution of the most important features)
-    out_name_W = f"{out_name_prefix}_explanation.png"
+    lambda_param_str = f"l{lambda_params['lower_bound_lambda']}-u{lambda_params['upper_bound_lambda']}-n{lambda_params['nb_lambda']}"
+    out_name_W = f"{out_name_prefix}_explanation_{lambda_param_str}.png"
     plot_weights(W, feature_names, title=title, out_name=out_name_W, left_margin=0.4)
 
 

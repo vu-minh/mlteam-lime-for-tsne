@@ -2,7 +2,7 @@
 
 config_selected_points = dict(
     # COUNTRY dataset
-    country1=dict(
+    country=dict(
         # sampling params
         n_samples=100,
         seed=42,
@@ -14,44 +14,36 @@ config_selected_points = dict(
         ),
         # selected points
         selected_points={
-            "5": dict(
-                name="Canada",
+            "97": dict(
+                name="Morocco",
                 reject_radius=5,
                 use_weights=False,
                 lambda_params=dict(
-                    lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=20,
+                    lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
                 ),
             ),
-            "9": dict(
-                name="Netherlands",
+            "127": dict(
+                name="Zambia",
                 reject_radius=5,
                 use_weights=False,
                 lambda_params=dict(
-                    lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=20,
+                    lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
                 ),
             ),
-            "14": dict(
-                name="Denmark",
+            "70": dict(
+                name="Tunisia",
                 reject_radius=5,
                 use_weights=False,
                 lambda_params=dict(
-                    lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=20,
+                    lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
                 ),
             ),
-            "96": dict(
-                name="South Africa",
+            "45": dict(
+                name="Bulgaria",
                 reject_radius=5,
                 use_weights=False,
                 lambda_params=dict(
-                    lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=20,
-                ),
-            ),
-            "81": dict(
-                name="Algeria",
-                reject_radius=5,
-                use_weights=False,
-                lambda_params=dict(
-                    lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=20,
+                    lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
                 ),
             ),
             "40": dict(
@@ -59,89 +51,33 @@ config_selected_points = dict(
                 reject_radius=5,
                 use_weights=False,
                 lambda_params=dict(
-                    lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=20,
+                    lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
                 ),
             ),
-            "23": dict(
-                name="Singapore",
+            "37": dict(
+                name="Lithuania",
                 reject_radius=5,
                 use_weights=False,
                 lambda_params=dict(
-                    lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=20,
+                    lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
                 ),
             ),
-            # "0": dict(
-            #     name="Norway",
-            #     reject_radius=5,
-            #     use_weights=False,
-            #     lambda_params=dict(
-            #         lower_bound_lambda=0.0001, upper_bound_lambda=5, nb_lambda=10,
-            #     ),
-            # ),
-            # "4": dict(
-            #     name="Sweden",
-            #     reject_radius=5,
-            #     use_weights=False,
-            #     lambda_params=dict(
-            #         lower_bound_lambda=0.0001, upper_bound_lambda=5, nb_lambda=10,
-            #     ),
-            # ),
-            # "6": dict(
-            #     name="Japan",
-            #     reject_radius=5,
-            #     use_weights=False,
-            #     lambda_params=dict(
-            #         lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=20,
-            #     ),
-            # ),
-            # "125": dict(
-            #     name="Benin",
-            #     reject_radius=5,
-            #     use_weights=False,
-            #     lambda_params=dict(
-            #         lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=20,
-            #     ),
-            # ),
-            # "55": dict(
-            #     name="Brazil",
-            #     reject_radius=5,
-            #     use_weights=False,
-            #     lambda_params=dict(
-            #         lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=20,
-            #     ),
-            # ),
-            # "106": dict(
-            #     name="Bangladesh",
-            #     reject_radius=5,
-            #     use_weights=False,
-            #     lambda_params=dict(
-            #         lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=20,
-            #     ),
-            # ),
-            # "89": dict(
-            #     name="Egypt",
-            #     reject_radius=5,
-            #     use_weights=False,
-            #     lambda_params=dict(
-            #         lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=20,
-            #     ),
-            # ),
-            # "7": dict(
-            #     name="United States",
-            #     reject_radius=5,
-            #     use_weights=False,
-            #     lambda_params=dict(
-            #         lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=20,
-            #     ),
-            # ),
-            # "17": dict(
-            #     name="United Kingdom",
-            #     reject_radius=5,
-            #     use_weights=False,
-            #     lambda_params=dict(
-            #         lower_bound_lambda=0.0001, upper_bound_lambda=3.5, nb_lambda=20,
-            #     ),
-            # ),
+            "18": dict(
+                name="Spain",
+                reject_radius=5,
+                use_weights=False,
+                lambda_params=dict(
+                    lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
+                ),
+            ),
+            "14": dict(
+                name="Denmark",
+                reject_radius=5,
+                use_weights=False,
+                lambda_params=dict(
+                    lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
+                ),
+            ),
         },
         bad_points={
             "12": dict(
