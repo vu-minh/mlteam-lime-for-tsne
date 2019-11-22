@@ -87,17 +87,6 @@ def apply_BIR(
     print(convert_script)
     os.system(convert_script)
 
-    # Read weights, feature_names, score from `output_directory` (BIR_R2.csv, BIR_W.csv, ...)
-    score_data = pd.read_csv(f"{output_directory}/BIR_R2.csv")
-    scores = score_data["x"].values
-
-    weight_data = pd.read_csv(f"{output_directory}/BIR_W.csv")
-    weights = weight_data[["V1", "V2"]].values.T
-
-    rotation_data = pd.read_csv(f"{output_directory}/BIR_R.csv")
-    rotation_mat = rotation_data[["V1", "V2"]].values
-    deg = math.degrees(math.acos(rotation_mat[0, 0]))
-
     # Rename BIR output files
     file_id = f"id{selected_idx}-l{lower_bound_lambda}-u{upper_bound_lambda}-n{nb_lambda}"
     rename_script = (
@@ -107,6 +96,17 @@ def apply_BIR(
     )
     print(rename_script)
     os.system(rename_script)
+
+    # Read weights, feature_names, score from `output_directory` (BIR_R2.csv, BIR_W.csv, ...)
+    score_data = pd.read_csv(f"{output_directory}/BIR_R2_{file_id}.csv")
+    scores = score_data["x"].values
+
+    weight_data = pd.read_csv(f"{output_directory}/BIR_W_{file_id}.csv")
+    weights = weight_data[["V1", "V2"]].values.T
+
+    rotation_data = pd.read_csv(f"{output_directory}/BIR_R_{file_id}.csv")
+    rotation_mat = rotation_data[["V1", "V2"]].values
+    deg = math.degrees(math.acos(rotation_mat[0, 0]))
 
     return weights, scores, deg
 
