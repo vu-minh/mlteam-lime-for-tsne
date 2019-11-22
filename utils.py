@@ -179,12 +179,13 @@ def scatter_samples_with_rotated_axes(y, y_samples, rot_deg=0, out_name="noname0
 
     x_min, y_min = np.min(y_samples[:, 0]), np.min(y_samples[:, 1])
     x_max, y_max = np.max(y_samples[:, 0]), np.max(y_samples[:, 1])
-    ax.set_xlim(0.75 * x_min, 1.25 * x_max)
-    ax.set_ylim(0.75 * y_min, 1.25 * y_max)
+    diff = 1.2 * max(abs(x_max - x_min), abs(y_max - y_min))
+    ax.set_xlim(y[0] - diff, y[0] + diff)
+    ax.set_ylim(y[1] - diff, y[1] + diff)
 
     ax.scatter(y[0], y[1], marker="s", facecolors="None", edgecolors="b", zorder=99)
     ax.scatter(y_samples[:, 0], y_samples[:, 1], s=64, marker="+", facecolor="r")
-    plot_perpendicular_lines(ax, y, rot_deg, axis_length=0.75 * (x_max - x_min))
+    plot_perpendicular_lines(ax, y, rot_deg, axis_length=0.75 * diff)
 
     if ax is None and out_name:
         plt.tight_layout()
