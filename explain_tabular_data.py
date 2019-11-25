@@ -47,6 +47,7 @@ def apply_BIR(
     lower_bound_lambda=0.0001,
     upper_bound_lambda=3.5,
     nb_lambda=10,
+    recompute=True,
 ):
     """
     """
@@ -71,31 +72,34 @@ def apply_BIR(
         os.mkdir(output_directory)
     output_Rdata = f"{output_directory}.Rdata"
 
-    # Run `Rscript BIR.R embedding.csv dataset.csv output.Rdata`
-    lambda_params = f"{lower_bound_lambda} {upper_bound_lambda} {nb_lambda}"
-    BIR_script = (
-        f"cd {BIR_dir};"
-        f"Rscript BIR.R "
-        f"../{y_samples_filename} ../{x_samples_filename} ../{output_Rdata} {lambda_params}; "
-        f"cd ../"
-    )
-    print(BIR_script)
-    os.system(BIR_script)
-
-    # Run `Rscript from_RData_to_csv.R output.Rdata output_directory`
-    convert_script = f"Rscript from_RData_to_csv.R {output_Rdata} {output_directory}/"
-    print(convert_script)
-    os.system(convert_script)
-
-    # Rename BIR output files
+    # pattern to identify the output of BIR
     file_id = f"id{selected_idx}-l{lower_bound_lambda}-u{upper_bound_lambda}-n{nb_lambda}"
-    rename_script = (
-        f"mv {output_directory}/BIR_R2.csv {output_directory}/BIR_R2_{file_id}.csv;"
-        f"mv {output_directory}/BIR_W.csv {output_directory}/BIR_W_{file_id}.csv;"
-        f"mv {output_directory}/BIR_R.csv {output_directory}/BIR_R_{file_id}.csv;"
-    )
-    print(rename_script)
-    os.system(rename_script)
+
+    if recompute:
+        # Run `Rscript BIR.R embedding.csv dataset.csv output.Rdata`
+        lambda_params = f"{lower_bound_lambda} {upper_bound_lambda} {nb_lambda}"
+        BIR_script = (
+            f"cd {BIR_dir};"
+            f"Rscript BIR.R "
+            f"../{y_samples_filename} ../{x_samples_filename} ../{output_Rdata} {lambda_params}; "
+            f"cd ../"
+        )
+        print(BIR_script)
+        os.system(BIR_script)
+
+        # Run `Rscript from_RData_to_csv.R output.Rdata output_directory`
+        convert_script = f"Rscript from_RData_to_csv.R {output_Rdata} {output_directory}/"
+        print(convert_script)
+        os.system(convert_script)
+
+        # Rename BIR output files
+        rename_script = (
+            f"mv {output_directory}/BIR_R2.csv {output_directory}/BIR_R2_{file_id}.csv;"
+            f"mv {output_directory}/BIR_W.csv {output_directory}/BIR_W_{file_id}.csv;"
+            f"mv {output_directory}/BIR_R.csv {output_directory}/BIR_R_{file_id}.csv;"
+        )
+        print(rename_script)
+        os.system(rename_script)
 
     # Read weights, feature_names, score from `output_directory` (BIR_R2.csv, BIR_W.csv, ...)
     score_data = pd.read_csv(f"{output_directory}/BIR_R2_{file_id}.csv")
@@ -137,6 +141,7 @@ def run_explainer(
         X,
         selected_idx=selected_idx,
         n_samples=n_samples,
+        n_neighbors_SMOTE=n_neighbors_SMOTE,
         tsne_hyper_params=tsne_hyper_params,
         early_stop_hyper_params=early_stop_hyper_params,
         log_dir=log_dir,
@@ -163,7 +168,6 @@ def run_explainer(
         W, score, rotation = explain_samples(x_samples, y_samples, linear_model=linear_model)
         title = f"Best score $R^2$ = {score:.3f}, best rotation = {rotation:.0f} deg"
     else:
-        pass
         # apply BIR to obtain W and scores for 2 axes
         W, scores, rotation = apply_BIR(
             selected_idx,
@@ -173,11 +177,12 @@ def run_explainer(
             feature_names,
             data_dir,
             BIR_dir,
+            recompute=True,  # for ploting the figures without re-run BIR
             **lambda_params,
         )
         title = (
-            f"Best $R^2$ for 1st axis {scores[0]:.3f} and for 2nd axis {scores[1]:.3f}\n"
-            f"Rotation {rotation:.3f} deg"
+            f"Best $R^2$ for 1st axis {scores[0]:.3f} and for 2nd axis {scores[1]:.3f}"
+            # f"\nRotation {rotation:.3f} deg"
         )
 
     # viz the original embedding with the new sampled points
@@ -189,11 +194,18 @@ def run_explainer(
     )
     out_name_Y = f"{out_name_prefix}_scatter.png"
     out_name_sample = f"{out_name_prefix}_samples.png"
-    scatter_with_samples(
-        Y, y_samples, selected_idx, texts=labels, rot_deg=rotation, out_name=out_name_Y
-    )
+    # scatter_with_samples(
+    #     Y, y_samples, selected_idx, texts=labels, rot_deg=rotation, out_name=out_name_Y
+    # )
     scatter_embedding_with_samples_and_rotated_axes(
-        Y, y_samples, selected_idx, texts=labels, rot_deg=rotation, out_name=out_name_sample,
+        X,
+        Y,
+        W,
+        y_samples,
+        selected_idx,
+        texts=labels,
+        rot_deg=rotation,
+        out_name=out_name_sample,
     )
 
     # visualize the weights of the linear model
@@ -216,6 +228,7 @@ if __name__ == "__main__":
     # define the variables for the dataset name, number of samples, ...
     # these global variables can be overrided by the new values loaded from the config
     n_samples = 100  # number of points to sample
+    n_neighbors_SMOTE = 10  # number of neighbors to take for SMOTE over sampling
     seed = 42  # for reproducing
     debug_level = 0  # verbose in tsne, 0 to disable
     force_recompute = False  # use pre-calculated embedding and samples or recompute them
@@ -227,6 +240,7 @@ if __name__ == "__main__":
     # override some global config
     if config:
         n_samples = config.get("n_samples", 100)
+        n_neighbors_SMOTE = config.get("n_neighbors_SMOTE", 10)
         seed = config.get("seed", 42)
 
     # basic params to run tsne the first time

@@ -5,6 +5,7 @@ config_selected_points = dict(
     country=dict(
         # sampling params
         n_samples=100,
+        n_neighbors_SMOTE=10,
         seed=42,
         # basic params to run tsne the first time
         tsne_hyper_params=dict(method="exact", perplexity=10, n_iter=1000, random_state=42,),
@@ -14,22 +15,22 @@ config_selected_points = dict(
         ),
         # selected points
         selected_points={
-            "97": dict(
-                name="Morocco",
-                reject_radius=5,
-                use_weights=False,
-                lambda_params=dict(
-                    lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
-                ),
-            ),
-            "127": dict(
-                name="Zambia",
-                reject_radius=5,
-                use_weights=False,
-                lambda_params=dict(
-                    lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
-                ),
-            ),
+            # "97": dict(
+            #     name="Morocco",
+            #     reject_radius=5,
+            #     use_weights=False,
+            #     lambda_params=dict(
+            #         lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
+            #     ),
+            # ),
+            # "127": dict(
+            #     name="Zambia",
+            #     reject_radius=5,
+            #     use_weights=False,
+            #     lambda_params=dict(
+            #         lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
+            #     ),
+            # ),
             "70": dict(
                 name="Tunisia",
                 reject_radius=5,
@@ -46,22 +47,22 @@ config_selected_points = dict(
                     lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
                 ),
             ),
-            "40": dict(
-                name="Croatia",
-                reject_radius=5,
-                use_weights=False,
-                lambda_params=dict(
-                    lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
-                ),
-            ),
-            "37": dict(
-                name="Lithuania",
-                reject_radius=5,
-                use_weights=False,
-                lambda_params=dict(
-                    lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
-                ),
-            ),
+            # "40": dict(
+            #     name="Croatia",
+            #     reject_radius=5,
+            #     use_weights=False,
+            #     lambda_params=dict(
+            #         lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
+            #     ),
+            # ),
+            # "37": dict(
+            #     name="Lithuania",
+            #     reject_radius=5,
+            #     use_weights=False,
+            #     lambda_params=dict(
+            #         lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
+            #     ),
+            # ),
             "18": dict(
                 name="Spain",
                 reject_radius=5,
@@ -70,14 +71,14 @@ config_selected_points = dict(
                     lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
                 ),
             ),
-            "14": dict(
-                name="Denmark",
-                reject_radius=5,
-                use_weights=False,
-                lambda_params=dict(
-                    lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
-                ),
-            ),
+            # "14": dict(
+            #     name="Denmark",
+            #     reject_radius=5,
+            #     use_weights=False,
+            #     lambda_params=dict(
+            #         lower_bound_lambda=0.01, upper_bound_lambda=10, nb_lambda=20,
+            #     ),
+            # ),
         },
         bad_points={
             "12": dict(
