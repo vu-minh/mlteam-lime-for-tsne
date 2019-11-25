@@ -10,6 +10,11 @@ import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.datasets import load_wine, load_iris, load_boston
 from sklearn.preprocessing import StandardScaler, Normalizer
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from matplotlib import ticker  # for customizing number of ticks
+
+
+plt.rcParams.update({"font.size": 18})
 
 
 def rotate_matrix(degree):
@@ -193,12 +198,12 @@ def plot_perpendicular_lines(ax, p0, rot_deg=0, axis_length=15):
     """
     x0, y0 = p0
     linestyle = "--"
-    text_offset = 0.2 * axis_length
+    text_offset = 0.3 * axis_length
 
     # note: rotation is counter-clockwise
     R = rotate_matrix(rot_deg)
     coor_axes = axis_length * R @ np.eye(2)
-    axes_colors = ["blue", "orange"]
+    axes_colors = ["#1f77b4", "#ff7f0e"]
     for i, ([x, y], color) in enumerate(zip(coor_axes, axes_colors)):
         ax.arrow(
             x=x0,
@@ -216,6 +221,7 @@ def plot_perpendicular_lines(ax, p0, rot_deg=0, axis_length=15):
             s=f"W{i+1}",
             color=color,
             ha="center",
+            fontsize=16,
         )
         ax.plot([x0, x0 - x], [y0, y0 - y], color=color, linestyle=linestyle)
 
@@ -231,7 +237,7 @@ def scatter_samples_with_rotated_axes(y, y_samples, rot_deg=0, out_name="noname0
     ax.set_xlim(y[0] - diff, y[0] + diff)
     ax.set_ylim(y[1] - diff, y[1] + diff)
 
-    ax.scatter(y[0], y[1], marker="s", facecolors="None", edgecolors="b", zorder=99)
+    ax.scatter(y[0], y[1], marker="s", facecolors="None", edgecolors="b", zorder=98)
     ax.scatter(y_samples[:, 0], y_samples[:, 1], s=64, marker="+", facecolor="r")
     plot_perpendicular_lines(ax, y, rot_deg, axis_length=0.75 * diff)
 
@@ -284,12 +290,72 @@ def scatter_embedding_with_samples_and_rotated_axes(
     plt.close(fig)
 
 
+def scatter_for_paper(X, Y, W, y_samples, selected_idx, rot_deg=0, out_name="noname04"):
+    fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(12, 6))
+    y0 = Y[selected_idx]
+
+    # plot the original embedding with samples and rotated axes
+    _plot_embdding_with_inset_zoom(ax0, Y, y0, y_samples, rot_deg)
+
+    # plot prediction error of the linear model
+    errors = prediction_error(X, W, Y - Y[selected_idx], rot_deg)
+    _plot_embedding_with_error(ax1, Y, y0, y_samples, rot_deg, errors)
+
+    plt.tight_layout()
+    fig.savefig(out_name)
+    plt.close(fig)
+
+
+def _plot_embedding_with_error(ax, Y, y0, y_samples, rot_deg, errors):
+    # scatter plot with error of each point represented by color
+    ax.set_aspect("equal")
+    scatter = ax.scatter(Y[:, 0], Y[:, 1], c=errors, alpha=0.75, zorder=10, cmap="RdYlBu_r")
+    ax.scatter(
+        y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r", zorder=1, alpha=0.5
+    )
+    ax.scatter(y0[0], y0[1], marker="s", facecolors="None", edgecolors="b", zorder=99)
+    plot_perpendicular_lines(ax, y0, rot_deg, axis_length=15)
+
+    # colorbar
+    cbaxes = inset_axes(ax, width="50%", height="5%", loc=2)
+    cb = plt.colorbar(scatter, cax=cbaxes, orientation="horizontal")
+    cb.ax.xaxis.set_major_locator(ticker.AutoLocator())
+    tick_locator = ticker.MaxNLocator(nbins=5)
+    cb.locator = tick_locator
+    cb.update_ticks()
+
+
+def _plot_embdding_with_inset_zoom(ax, Y, y0, y_samples, rot_deg):
+    # plot the embedding and samples in the first plot
+    ax.set_aspect("equal")
+    ax.scatter(Y[:, 0], Y[:, 1], c=None, alpha=0.5)
+    ax.scatter(y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r")
+    ax.scatter(y0[0], y0[1], marker="s", facecolors="None", edgecolors="b", zorder=99)
+
+    # limit for zoom-in region
+    x_min, y_min = np.min(y_samples[:, 0]), np.min(y_samples[:, 1])
+    x_max, y_max = np.max(y_samples[:, 0]), np.max(y_samples[:, 1])
+    diff = 0.8 * max(abs(x_max - x_min), abs(y_max - y_min))
+
+    # inset zoom in
+    axins = ax.inset_axes([0.025, 0.525, 0.45, 0.45])
+    axins.set_aspect("equal")
+    axins.get_xaxis().set_visible(False)
+    axins.get_yaxis().set_visible(False)
+    axins.set_xlim(y0[0] - diff, y0[0] + diff)
+    axins.set_ylim(y0[1] - diff, y0[1] + diff)
+    ax.indicate_inset_zoom(axins)
+
+    axins.scatter(Y[:, 0], Y[:, 1], c=None, alpha=0.5)
+    axins.scatter(y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r")
+    axins.scatter(y0[0], y0[1], marker="s", facecolors="None", edgecolors="b", zorder=99)
+    plot_perpendicular_lines(axins, y0, rot_deg, axis_length=0.75 * diff)
+
+
 def prediction_error(X, W, Y, rot_deg):
     R = rotate_matrix(rot_deg)
-    print(X.shape, W.shape, Y.shape, R.shape)
     diff = X @ W.T - Y @ R
     mse = np.linalg.norm(diff, axis=1) / X.shape[0]
-    print(mse.shape, mse.min())
     return mse
 
 
@@ -346,7 +412,7 @@ def plot_heatmap(W, img=None, title="", out_name="noname00"):
 
 
 def plot_weights(
-    W, feature_names=None, title="", left_margin="auto", out_name="noname00", filter_zeros=True
+    W, feature_names=None, title="", left_margin="auto", out_name="", filter_zeros=True,
 ):
     """Plot importance (weights) of each feature
     Args:
@@ -368,24 +434,25 @@ def plot_weights(
 
     n_cols = W.shape[0]
     fig, axes = plt.subplots(
-        1, n_cols, figsize=(n_cols * 5, W.shape[1] * 0.25 + 3), sharey=True
+        1, n_cols, figsize=(n_cols * 4.5, W.shape[1] * 0.25 + 2), sharey=True
     )
-    for ax, weights in zip(axes.ravel(), W):
+    for i, (ax, weights) in enumerate(zip(axes.ravel(), W)):
         y_pos = np.arange(len(feature_names))
         ax.barh(
             y_pos,
             weights,
-            height=0.5,
+            height=0.65,
             align="center",
-            color=list(map(lambda w: "Green" if w > 0 else "red", weights.tolist())),
+            color=list(map(lambda w: "#2ca02c" if w > 0 else "#d62728", weights.tolist())),
         )
         ax.set_yticks(y_pos)
-        ax.set_yticklabels(feature_names)
-        # ax.invert_yaxis()  # labels read top-to-bottom
-        ax.set_xlabel("Importance of features")
+        ax.set_yticklabels(feature_names, fontsize=18)
+        ax.set_title(f"W{i+1}", fontsize=18)
+        # ax.set_xlabel("Importance of features")
 
     if isinstance(left_margin, float):
         fig.subplots_adjust(left=left_margin)
-    fig.suptitle(title)
+    # fig.suptitle(title)
+    fig.tight_layout()
     fig.savefig(out_name)
     plt.close(fig)
