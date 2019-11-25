@@ -264,7 +264,9 @@ def scatter_embedding_with_samples_and_rotated_axes(
     y0 = Y[selected_idx]
 
     # calculate prediction error of the linear model
-    errors = prediction_error(X, W, Y - Y[selected_idx], rot_deg)
+    Y_target = Y - Y[selected_idx]
+    Y_target -= Y_target.mean(axis=1)
+    errors = prediction_error(X, W, Y_target, rot_deg)
 
     # plot the embedding
     sc = ax0.scatter(Y[:, 0], Y[:, 1], c=errors, cmap="RdBu", alpha=0.5)
