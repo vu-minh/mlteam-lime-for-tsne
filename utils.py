@@ -27,10 +27,58 @@ def clean_feature_names(feature_names):
 
 def load_country():
     data = joblib.load("./dataset/country.dat")
+    fix_feature_names = [
+        "Pop growth",
+        "Pop growth 2004",
+        "Price index",
+        "Carbon Dioxide 2003",
+        "Export 1990",
+        "Export 2004",
+        "Elec 2003",
+        "GDP",
+        "GDP PPP",
+        "GDP pc",
+        "GDP pc growth rate",
+        "Fem Econo Rate",
+        "Fem Econo 1990",
+        "Fem Econo 2004",
+        "Health Exp",
+        "Babies",
+        "Internet 1990",
+        "Import 1990",
+        "Import 2004",
+        "Tertiary female ratio",
+        "Babies immunized",
+        "Manufactured Exp 2004",
+        "Foreign invest 2004",
+        "Military 2004",
+        "Public Health 2003",
+        "Private Health 2003",
+        "Primary export 2004",
+        "Public Health",
+        "Refugees asylum",
+        "Refugees origin",
+        "Armed forces",
+        "Parliament Seats Women",
+        "Female Male income",
+        "House women 2006",
+        "Pop 1975",
+        "Pop 2004",
+        "Pop 2015",
+        "Tuberculosis detected",
+        "Tuberculosis cured 2004",
+        "Trad fuel",
+        "ODA pc donnor 2004",
+        "ODA to least dev 1990",
+        "ODA to least dev 2004",
+        "ODA received",
+        "ODA received pc",
+    ]
     return {
         "data": data["X"],
         "target": data["country_names"],
-        "feature_names": clean_feature_names(data["indicator_descriptions"]),
+        "feature_names": fix_feature_names
+        # clean_feature_names(data["indicator_descriptions"]),
     }
 
 
@@ -194,7 +242,7 @@ def scatter_samples_with_rotated_axes(y, y_samples, rot_deg=0, out_name="noname0
 
 
 def scatter_embedding_with_samples_and_rotated_axes(
-    Y, y_samples, selected_idx, texts=None, rot_deg=0, out_name="noname03", text_length=0
+    X, Y, W, y_samples, selected_idx, texts=None, rot_deg=0, out_name="noname03", text_length=0
 ):
     """ show subplots ax0 | ax1, in which
         ax0 shows the embedding `Y` with the selected point `selected_idx` and the `y_samples`
@@ -207,11 +255,15 @@ def scatter_embedding_with_samples_and_rotated_axes(
 
     y0 = Y[selected_idx]
 
+    # calculate prediction error of the linear model
+    errors = prediction_error(X, W, Y - Y[selected_idx], rot_deg)
+
     # plot the embedding
-    ax0.scatter(Y[:, 0], Y[:, 1], c=None, alpha=0.5)
+    sc = ax0.scatter(Y[:, 0], Y[:, 1], c=errors, cmap="RdBu", alpha=0.5)
     ax0.scatter(y0[0], y0[1], zorder=99, marker="s", facecolors="None", edgecolors="b")
     # plot the samples
     ax0.scatter(y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r")
+    fig.colorbar(sc, ax=ax0)
 
     # show text
     if text_length > 0 and texts is not None:
@@ -230,6 +282,15 @@ def scatter_embedding_with_samples_and_rotated_axes(
     plt.tight_layout()
     fig.savefig(out_name)
     plt.close(fig)
+
+
+def prediction_error(X, W, Y, rot_deg):
+    R = rotate_matrix(rot_deg)
+    print(X.shape, W.shape, Y.shape, R.shape)
+    diff = X @ W.T - Y @ R
+    mse = np.linalg.norm(diff, axis=1) / X.shape[0]
+    print(mse.shape, mse.min())
+    return mse
 
 
 def plot_samples(samples, out_name="noname01"):
@@ -284,7 +345,9 @@ def plot_heatmap(W, img=None, title="", out_name="noname00"):
     plt.close(fig)
 
 
-def plot_weights(W, feature_names=None, title="", left_margin="auto", out_name="noname00"):
+def plot_weights(
+    W, feature_names=None, title="", left_margin="auto", out_name="noname00", filter_zeros=True
+):
     """Plot importance (weights) of each feature
     Args:
         W: [2xD]
@@ -292,18 +355,34 @@ def plot_weights(W, feature_names=None, title="", left_margin="auto", out_name="
     """
     assert W is not None, "Error with linear model!"
 
+    if filter_zeros:
+        keep_indices = []
+        for i in range(W.shape[1]):
+            if W[0, i] != 0.0 or W[1, i] != 0.0:
+                keep_indices.append(i)
+        W = W[:, keep_indices]
+        feature_names = np.array(feature_names)[keep_indices]
+
     if feature_names is None:
         feature_names = [f"f{i+1}" for i in range(W.shape[1])]
 
     n_cols = W.shape[0]
-    fig, axes = plt.subplots(1, n_cols, figsize=(n_cols * 5, W.shape[1] * 0.3 + 1), sharey=True)
+    fig, axes = plt.subplots(
+        1, n_cols, figsize=(n_cols * 5, W.shape[1] * 0.25 + 3), sharey=True
+    )
     for ax, weights in zip(axes.ravel(), W):
         y_pos = np.arange(len(feature_names))
-        ax.barh(y_pos, weights)
+        ax.barh(
+            y_pos,
+            weights,
+            height=0.5,
+            align="center",
+            color=list(map(lambda w: "Green" if w > 0 else "red", weights.tolist())),
+        )
         ax.set_yticks(y_pos)
         ax.set_yticklabels(feature_names)
-        ax.invert_yaxis()  # labels read top-to-bottom
-        # ax.set_xlabel("Importance of features")
+        # ax.invert_yaxis()  # labels read top-to-bottom
+        ax.set_xlabel("Importance of features")
 
     if isinstance(left_margin, float):
         fig.subplots_adjust(left=left_margin)
