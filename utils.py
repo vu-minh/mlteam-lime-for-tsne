@@ -430,7 +430,7 @@ def plot_heatmap(W, img=None, title="", out_name="noname00"):
 
 
 def plot_weights(
-    W, feature_names=None, title="", left_margin="auto", out_name="", filter_zeros=True,
+    W, feature_names=None, titles=["", ""], left_margin="auto", out_name="", filter_zeros=True,
 ):
     """Plot importance (weights) of each feature
     Args:
@@ -438,6 +438,7 @@ def plot_weights(
         feature_names: [D,]
     """
     assert W is not None, "Error with linear model!"
+    max_text_length = max(list(map(len, feature_names)))
 
     if filter_zeros:
         keep_indices = []
@@ -445,16 +446,22 @@ def plot_weights(
             if W[0, i] != 0.0 or W[1, i] != 0.0:
                 keep_indices.append(i)
         W = W[:, keep_indices]
-        feature_names = np.array(feature_names)[keep_indices]
+        feature_names = np.array(
+            [
+                f"{s:>{max_text_length+2}}"
+                for i, s in enumerate(feature_names)
+                if i in keep_indices
+            ]
+        )
 
     if feature_names is None:
         feature_names = [f"f{i+1}" for i in range(W.shape[1])]
 
     n_cols = W.shape[0]
     fig, axes = plt.subplots(
-        1, n_cols, figsize=(n_cols * 4.5, W.shape[1] * 0.25 + 2), sharey=True
+        1, n_cols, figsize=(n_cols * 5, W.shape[1] * 0.25 + 2), sharey=True
     )
-    for i, (ax, weights) in enumerate(zip(axes.ravel(), W)):
+    for ax, weights, title in zip(axes.ravel(), W, titles):
         y_pos = np.arange(len(feature_names))
         ax.barh(
             y_pos,
@@ -465,7 +472,7 @@ def plot_weights(
         )
         ax.set_yticks(y_pos)
         ax.set_yticklabels(feature_names, fontsize=18)
-        ax.set_title(f"W{i+1}", fontsize=18)
+        ax.set_title(title, fontsize=18)
         # ax.set_xlabel("Importance of features")
 
     if isinstance(left_margin, float):
