@@ -15,7 +15,7 @@ from sklearn.linear_model import Lasso, ElasticNet, Ridge, LinearRegression
 from sample_tsne import tsne_sample_embedded_points
 from explainer import explain_samples, explain_samples_with_cv
 from utils import scatter_with_samples, plot_weights
-from utils import scatter_embedding_with_samples_and_rotated_axes
+from utils import scatter_for_paper
 from utils import load_tabular_dataset
 
 
@@ -182,7 +182,7 @@ def run_explainer(
         )
         title = (
             f"Best $R^2$ for 1st axis {scores[0]:.3f} and for 2nd axis {scores[1]:.3f}"
-            # f"\nRotation {rotation:.3f} deg"
+            f"\nRotation {rotation:.3f} deg"
         )
 
     # viz the original embedding with the new sampled points
@@ -194,16 +194,12 @@ def run_explainer(
     )
     out_name_Y = f"{out_name_prefix}_scatter.png"
     out_name_sample = f"{out_name_prefix}_samples.png"
-    # scatter_with_samples(
-    #     Y, y_samples, selected_idx, texts=labels, rot_deg=rotation, out_name=out_name_Y
-    # )
-    scatter_embedding_with_samples_and_rotated_axes(
-        X,
-        Y,
-        W,
-        y_samples,
-        selected_idx,
-        texts=labels,
+    scatter_for_paper(
+        X=X,
+        Y=Y,
+        W=W,
+        y_samples=y_samples,
+        selected_idx=selected_idx,
         rot_deg=rotation,
         out_name=out_name_sample,
     )
@@ -212,7 +208,8 @@ def run_explainer(
     # (show contribution of the most important features)
     lambda_param_str = f"l{lambda_params['lower_bound_lambda']}-u{lambda_params['upper_bound_lambda']}-n{lambda_params['nb_lambda']}"
     out_name_W = f"{out_name_prefix}_explanation_{lambda_param_str}.png"
-    plot_weights(W, feature_names, title=title, out_name=out_name_W, left_margin=0.4)
+    plot_weights(W, feature_names, out_name=out_name_W, left_margin=0.2)
+    print("[DEBUG] Chart title: ", title)
 
 
 if __name__ == "__main__":
