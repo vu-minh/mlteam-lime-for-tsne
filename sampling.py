@@ -77,7 +77,7 @@ def generate_samples_SMOTE(selected_id, X, k_nearbors=10, n_samples=100):
     for neighbor_idx in neighbor_ids:
         diff = X[neighbor_idx] - X[selected_id]
         for _ in range(n_samples_per_pair):
-            alpha = np.random.rand()
+            alpha = np.clip(np.random.rand(), a_min=1e-3, a_max=1.0)
             x_sample = X[selected_id] + alpha * diff
             x_samples.append(x_sample.reshape(1, -1))
 
