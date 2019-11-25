@@ -198,12 +198,12 @@ def plot_perpendicular_lines(ax, p0, rot_deg=0, axis_length=15):
     """
     x0, y0 = p0
     linestyle = "--"
-    text_offset = 0.3 * axis_length
+    text_offset = 0.1 * axis_length
 
     # note: rotation is counter-clockwise
     R = rotate_matrix(rot_deg)
     coor_axes = axis_length * R @ np.eye(2)
-    axes_colors = ["#1f77b4", "#ff7f0e"]
+    axes_colors = ["indigo", "green"]  # ["#1f77b4", "#ff7f0e"]
     for i, ([x, y], color) in enumerate(zip(coor_axes, axes_colors)):
         ax.arrow(
             x=x0,
@@ -216,12 +216,14 @@ def plot_perpendicular_lines(ax, p0, rot_deg=0, axis_length=15):
             linestyle=linestyle,
         )
         ax.text(
-            x=x0 + x - text_offset,
-            y=y0 + y - text_offset,
+            x=x0 + x + text_offset,
+            y=y0 + y + text_offset,
             s=f"W{i+1}",
             color=color,
             ha="center",
-            fontsize=16,
+            fontsize=14,
+            # weight="bold",
+            zorder=99,
         )
         ax.plot([x0, x0 - x], [y0, y0 - y], color=color, linestyle=linestyle)
 
@@ -238,7 +240,7 @@ def scatter_samples_with_rotated_axes(y, y_samples, rot_deg=0, out_name="noname0
     ax.set_ylim(y[1] - diff, y[1] + diff)
 
     ax.scatter(y[0], y[1], marker="s", facecolors="None", edgecolors="b", zorder=98)
-    ax.scatter(y_samples[:, 0], y_samples[:, 1], s=64, marker="+", facecolor="r")
+    ax.scatter(y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r")
     plot_perpendicular_lines(ax, y, rot_deg, axis_length=0.75 * diff)
 
     if ax is None and out_name:
@@ -309,7 +311,17 @@ def scatter_for_paper(X, Y, W, y_samples, selected_idx, rot_deg=0, out_name="non
 def _plot_embedding_with_error(ax, Y, y0, y_samples, rot_deg, errors):
     # scatter plot with error of each point represented by color
     ax.set_aspect("equal")
-    scatter = ax.scatter(Y[:, 0], Y[:, 1], c=errors, alpha=0.75, zorder=10, cmap="RdYlBu_r")
+    scatter = ax.scatter(
+        Y[:, 0],
+        Y[:, 1],
+        s=64,
+        c=errors,
+        alpha=0.85,
+        zorder=10,
+        cmap="Blues_r",
+        linewidth=1.0,
+        edgecolor="b",
+    )
     ax.scatter(
         y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r", zorder=1, alpha=0.5
     )
@@ -328,7 +340,9 @@ def _plot_embedding_with_error(ax, Y, y0, y_samples, rot_deg, errors):
 def _plot_embdding_with_inset_zoom(ax, Y, y0, y_samples, rot_deg):
     # plot the embedding and samples in the first plot
     ax.set_aspect("equal")
-    ax.scatter(Y[:, 0], Y[:, 1], c=None, alpha=0.5)
+    ax.scatter(
+        Y[:, 0], Y[:, 1], s=64, color="#D3D3D3", alpha=1.0, linewidth=1.0, edgecolor="#808080",
+    )
     ax.scatter(y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r")
     ax.scatter(y0[0], y0[1], marker="s", facecolors="None", edgecolors="b", zorder=99)
 
@@ -346,8 +360,10 @@ def _plot_embdding_with_inset_zoom(ax, Y, y0, y_samples, rot_deg):
     axins.set_ylim(y0[1] - diff, y0[1] + diff)
     ax.indicate_inset_zoom(axins)
 
-    axins.scatter(Y[:, 0], Y[:, 1], c=None, alpha=0.5)
-    axins.scatter(y_samples[:, 0], y_samples[:, 1], s=32, marker="+", facecolor="r")
+    axins.scatter(
+        Y[:, 0], Y[:, 1], s=64, color="#D3D3D3", alpha=1.0, linewidth=1.0, edgecolor="#808080",
+    )
+    axins.scatter(y_samples[:, 0], y_samples[:, 1], s=64, marker="+", facecolor="r")
     axins.scatter(y0[0], y0[1], marker="s", facecolors="None", edgecolors="b", zorder=99)
     plot_perpendicular_lines(axins, y0, rot_deg, axis_length=0.75 * diff)
 
