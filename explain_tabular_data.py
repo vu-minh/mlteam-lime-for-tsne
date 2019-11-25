@@ -177,7 +177,7 @@ def run_explainer(
             feature_names,
             data_dir,
             BIR_dir,
-            recompute=True,  # for ploting the figures without re-run BIR
+            recompute=False,  # for ploting the figures without re-run BIR
             **lambda_params,
         )
         title = (
@@ -208,7 +208,9 @@ def run_explainer(
     # (show contribution of the most important features)
     lambda_param_str = f"l{lambda_params['lower_bound_lambda']}-u{lambda_params['upper_bound_lambda']}-n{lambda_params['nb_lambda']}"
     out_name_W = f"{out_name_prefix}_explanation_{lambda_param_str}.png"
-    plot_weights(W, feature_names, out_name=out_name_W, left_margin=0.2)
+    # add title for the weights of the 2 axes
+    titles = [f"W1 ($R^2$ = {scores[0]:.3f})", f"W2 ($R^2$ = {scores[1]:.3f})"]
+    plot_weights(W, feature_names, titles=titles, out_name=out_name_W, left_margin=0.3)
     print("[DEBUG] Chart title: ", title)
 
 
