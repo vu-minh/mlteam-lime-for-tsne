@@ -274,11 +274,11 @@ def modifiedTSNE(**kwargs):
     # force using "exact" method to test gradient
     # 15/11/2019: no need to for exact method since we have customize for barnes_hut
     # kwargs.update({"method": "exact"})
-    # sklearn.manifold.t_sne._gradient_descent = modified_gradient_descent
-    sklearn.manifold.t_sne._kl_divergence = my_kl_divergence
-    sklearn.manifold.t_sne._kl_divergence_bh = my_kl_divergence_bh
+    # sklearn.manifold._t_sne._gradient_descent = modified_gradient_descent
+    sklearn.manifold._t_sne._kl_divergence = my_kl_divergence
+    sklearn.manifold._t_sne._kl_divergence_bh = my_kl_divergence_bh
     tsne = sklearn.manifold.TSNE(**kwargs)
     return tsne
 
 
-# backtrack: /opt/anaconda3/lib/python3.6/site-packages/sklearn/manifold/t_sne.py
+# backtrack: /opt/anaconda3/lib/python3.6/site-packages/sklearn/manifold/_t_sne.py
