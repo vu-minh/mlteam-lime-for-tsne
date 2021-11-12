@@ -1,6 +1,12 @@
 # mlteam-lime-for-tsne
 MLTeam: Apply LIME for t-SNE.
 
+
+## ZERO-CONFIG
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/vu-minh/mlteam-lime-for-tsne)
+
+
 The note for the meeting of our team is [here](meeting_notes.md)
 
 ![](LIME+tSNE.png)
